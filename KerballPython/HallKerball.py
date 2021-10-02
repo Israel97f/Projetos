@@ -1,8 +1,11 @@
-import Krpc
 import lib.fases
+import lib.Mathe
 
 # Inicinado a conexão
-conn = krpc.conect()
-vessel = conn.space_center.active_vessel
-flight_info = vessel.flight()
+lib.fases.IntConect()
+lib.Mathe.Contador(10)
+lib.fases.Lauch()
 
+#pip install krpc
+
+#python -m pip install
