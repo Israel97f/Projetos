@@ -44,7 +44,7 @@ def Orbitador():
             break
         
     while True:
-        if periastro() - apoastro() < 1000:
+        if periastro() - apoastro() < 100:
             if apoastro() - altitude() < 300:
                 vessel.control.throttle = 1
             else:
