@@ -1,3 +1,8 @@
 import krpc
 conn = krpc.connect()
-print(conn.krpc.get_status().version)
+vessel = conn.space_center.active_vessel
+masss = 1
+enpuxo = vessel.max_thrust
+
+print(masss)
+print(enpuxo)
