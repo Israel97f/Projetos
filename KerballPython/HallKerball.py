@@ -1,6 +1,7 @@
 import lib.fases
 import lib.Mathe
 
+
 # Inicinado a conexão
 lib.fases.IntConect()
 lib.Mathe.Contador(10)
