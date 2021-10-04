@@ -1,4 +1,5 @@
 import krpc
+import math
 from time import sleep
 
 
@@ -28,8 +29,9 @@ def Lauch():
     vessel.control.activate_next_stage()
 
 
-def Orbitador():
+def Orbitador(alt=70000):
     global vessel
+    global altitude
     #Twr = vessel.thrust / vessel.mass
     altitude = addStream(vessel.flight(), 'mean_altitude')
     apoastro = addStream(vessel.orbit, 'apoapsis_altitude')
@@ -37,9 +39,9 @@ def Orbitador():
     vessel.auto_pilot.sas = False
     vessel.auto_pilot.engage()
     while True:
-        vessel.auto_pilot.target_pitch_and_heading(90 - (altitude() / 1000), 90)
+        vessel.auto_pilot.target_pitch_and_heading(90 - (90 * (alt / altitude())), 90)
         vessel.control.throttle = vessel.mass * 9.6 * 1.4 /( vessel.max_thrust)
-        if apoastro() > 90000:
+        if apoastro() > alt:
             vessel.control.throttle = 0
             break
         
@@ -55,6 +57,21 @@ def Orbitador():
             break
 
     vessel.auto_pilot.disengage()
+
+
+
+def verticalLanding():
+    global vessel
+    vessel.auto_pilot.sas = True
+    vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+    vessel.control.throttle = 0
+    #abs()
+    pass
+
+
+
+def direction_movement():
+    pass
 
 
 def addStream(classe, metodo):
