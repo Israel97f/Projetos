@@ -1,5 +1,4 @@
 import krpc
-import math
 from time import sleep
 
 
@@ -59,20 +58,47 @@ def Orbitador(alt=70000):
     vessel.auto_pilot.disengage()
 
 
-
 def verticalLanding():
     global vessel
+    global veloref 
+    veloref = vessel.orbit.body.reference_frame
+    Speed = addStream(vessel.flight(), 'speed')
+    surface_altitude = addStream(vessel.flight(), 'surface_altitude')
     vessel.auto_pilot.sas = True
     vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
     vessel.control.throttle = 0
-    #abs()
-    pass
+    d = (Speed**2/(2*(vessel.max_thrust / vessel.mass - 9.6)))
+    while True:
+        if surface_altitude() <= d:
+            vessel.control.throttle = 1
+            break
 
+    while True:
 
+        if surface_altitude() < 100:
+            vessel.control.throttle = 1.2 * vessel.mass / vessel.max_thrust
+        if Speed() <= 5.00 and direction_movement() == -1:
+            vessel.control.throttle = vessel.mass / vessel.max_thrust
+            if Speed() < 0.5:
+                vessel.control.throttle = 0
+                break
+  
 
 def direction_movement():
-    pass
+    altitude_anterior = altitude()
+    ret = 0
+    while True:
+        if abs(altitude() - altitude_anterior) > 0:
+            
+            if altitude() - altitude_anterior > 0:
+                ret = 1
+            else:
+                ret = -1
 
+            altitude_anterior = altitude()
+            break
+    return ret
+       
 
 def addStream(classe, metodo):
     global conn
