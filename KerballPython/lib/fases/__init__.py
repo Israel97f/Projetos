@@ -20,12 +20,21 @@ def IntConect():
             break
 
 
-def Lauch():
+def Lauch(alt=0, sas=False):
     global conn
     global vessel
+    global apoastro
+    
     vessel = conn.space_center.active_vessel
+    apoastro = addStream(vessel.orbit, 'apoapsis_altitude')
     vessel.control.throttle = 1
     vessel.control.activate_next_stage()
+    vessel.auto_pilot.sas = sas
+    while True:
+        if apoastro() >= alt:
+            vessel.control.throttle = 0
+            break
+        
 
 
 def Orbitador(alt=70000):
@@ -65,13 +74,21 @@ def verticalLanding():
     Speed = addStream(vessel.flight(), 'speed')
     surface_altitude = addStream(vessel.flight(), 'surface_altitude')
     vessel.auto_pilot.sas = True
-    vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+    
     vessel.control.throttle = 0
-    d = (Speed**2/(2*(vessel.max_thrust / vessel.mass - 9.6)))
+    
     while True:
-        if surface_altitude() <= d:
-            vessel.control.throttle = 1
-            break
+        if direction_movement() == -1:
+            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+            try:
+                d = (Speed() ** 2 / (2*(vessel.max_thrust / vessel.mass - 9.6)))
+            except:
+                d = 1000
+
+            if surface_altitude() <= d:
+                vessel.control.throttle = 1
+                break
+
 
     while True:
 
@@ -85,6 +102,7 @@ def verticalLanding():
   
 
 def direction_movement():
+    altitude = addStream(vessel.flight(), 'mean_altitude')
     altitude_anterior = altitude()
     ret = 0
     while True:

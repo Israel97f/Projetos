@@ -1,8 +1,8 @@
-import krpc
-conn = krpc.connect()
-vessel = conn.space_center.active_vessel
-masss = 1
-enpuxo = vessel.max_thrust
+import lib.fases
 
-print(masss)
-print(enpuxo)
+
+lib.fases.IntConect()
+lib.fases.Lauch(10000, True)
+lib.fases.verticalLanding()
+
+print('ok')
