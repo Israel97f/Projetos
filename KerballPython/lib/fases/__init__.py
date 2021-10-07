@@ -71,7 +71,7 @@ def verticalLanding():
     global vessel
     global veloref 
     veloref = vessel.orbit.body.reference_frame
-    Speed = addStream(vessel.flight(), 'speed')
+    Speed = addStream(vessel.flight(veloref), 'speed')
     surface_altitude = addStream(vessel.flight(), 'surface_altitude')
     vessel.auto_pilot.sas = True
     
@@ -81,9 +81,14 @@ def verticalLanding():
         if direction_movement() == -1:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             try:
-                d = (Speed() ** 2 / (2*(vessel.max_thrust / vessel.mass - 9.6)))
+                d = (Speed() ** 2 / (2*(vessel.max_thrust / vessel.mass - 9.6))) + 50
             except:
                 d = 1000
+            print('-' * 20)
+            print(d)
+            print(Speed())
+            print(Speed() ** 2)
+            print(Speed() * Speed())
 
             if surface_altitude() <= d:
                 vessel.control.throttle = 1
