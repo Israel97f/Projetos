@@ -1,3 +1,4 @@
+from sys import base_exec_prefix
 import krpc
 from time import sleep
 
@@ -126,3 +127,22 @@ def direction_movement():
 def addStream(classe, metodo):
     global conn
     return conn.add_stream(getattr, classe, metodo )
+
+def levitar ():
+    global vessel
+    vessel = conn.space_center.active_vessel
+    vessel.auto_pilot.engage()
+    vessel.auto_pilot.target_pitch_and_heading(90, 90)
+    vessel.control.throttle = 1.00 * 9.6 * vessel.mass / 3000000
+    vessel.control.activate_next_stage()
+    vessel.control.throttle = 1.17 * 9.6 * vessel.mass / vessel.max_thrust
+    sleep(9)
+    while True:
+        if direction_movement() == 1:
+            vessel.control.throttle = 0.93 * 9.6 * vessel.mass / vessel.max_thrust
+        else:
+            vessel.control.throttle = 0.83 * 9.6 * vessel.mass / vessel.max_thrust
+            sleep(9)
+            while True:
+                vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
+
