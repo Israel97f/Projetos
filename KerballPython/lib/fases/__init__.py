@@ -81,7 +81,7 @@ def verticalLanding():
         if direction_movement() == -1:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             try:
-                d = (Speed() ** 2 / (2*(vessel.max_thrust / vessel.mass - 9.6))) + 50
+                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 120
             except:
                 d = 1000
             print('-' * 20)
@@ -98,12 +98,18 @@ def verticalLanding():
     while True:
 
         if surface_altitude() < 100:
-            vessel.control.throttle = 1.2 * vessel.mass / vessel.max_thrust
-        if Speed() <= 5.00 and direction_movement() == -1:
-            vessel.control.throttle = vessel.mass / vessel.max_thrust
+            pouso()
+            break
+            #vessel.control.throttle = 1.2 * vessel.mass / vessel.max_thrust
+        
+        if Speed() <= 50.00 and direction_movement() == -1:
+            vessel.control.throttle = 0.94 * 9.6 * vessel.mass / vessel.max_thrust
+            """
             if Speed() < 0.5:
                 vessel.control.throttle = 0
                 break
+            """
+        
   
 
 def direction_movement():
@@ -131,21 +137,23 @@ def addStream(classe, metodo):
 def pouso():
     global vessel
     vessel = conn.space_center.active_vessel
+    veloref = vessel.orbit.body.reference_frame
     Speed = addStream(vessel.flight(veloref), 'speed')
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90)
-    vessel.control.throttle = 1.00 * 9.6 * vessel.mass / 3000000
+    #vessel.control.throttle = 1.00 * 9.6 * vessel.mass / 3000000
     vessel.control.activate_next_stage()
+    sleep(0.1)
     
     
     while True:
         if Speed() > 5.0 and direction_movement() == -1:
-            vessel.control.throttle = 1.17 * 9.6 * vessel.mass / vessel.max_thrust
-        if direction_movement() == 1:
+            vessel.control.throttle = 0.6 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
+        elif direction_movement() == 1:
             vessel.control.throttle = 0.93 * 9.6 * vessel.mass / vessel.max_thrust
         else:
             vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
-            if Speed() > 0.5:
+            if Speed() < 0.5:
                 vessel.control.throttle = 0
                 break
            
