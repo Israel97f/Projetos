@@ -128,21 +128,24 @@ def addStream(classe, metodo):
     return conn.add_stream(getattr, classe, metodo )
 
 
-def levitar ():
+def pouso():
     global vessel
     vessel = conn.space_center.active_vessel
+    Speed = addStream(vessel.flight(veloref), 'speed')
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90)
     vessel.control.throttle = 1.00 * 9.6 * vessel.mass / 3000000
     vessel.control.activate_next_stage()
-    vessel.control.throttle = 1.17 * 9.6 * vessel.mass / vessel.max_thrust
-    sleep(9)
+    
+    
     while True:
+        if Speed() > 5.0 and direction_movement() == -1:
+            vessel.control.throttle = 1.17 * 9.6 * vessel.mass / vessel.max_thrust
         if direction_movement() == 1:
             vessel.control.throttle = 0.93 * 9.6 * vessel.mass / vessel.max_thrust
         else:
-            vessel.control.throttle = 0.83 * 9.6 * vessel.mass / vessel.max_thrust
-            sleep(9)
-            while True:
-                vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
-
+            vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
+            if Speed() > 0.5:
+                vessel.control.throttle = 0
+                break
+           
