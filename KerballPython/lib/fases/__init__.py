@@ -1,4 +1,4 @@
-from sys import base_exec_prefix
+#from sys import base_exec_prefix
 import krpc
 from time import sleep
 
@@ -36,7 +36,6 @@ def Lauch(alt=0, sas=False):
             vessel.control.throttle = 0
             break
         
-
 
 def Orbitador(alt=70000):
     global vessel
@@ -127,6 +126,7 @@ def direction_movement():
 def addStream(classe, metodo):
     global conn
     return conn.add_stream(getattr, classe, metodo )
+
 
 def levitar ():
     global vessel
