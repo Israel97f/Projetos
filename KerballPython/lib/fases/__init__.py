@@ -1,4 +1,3 @@
-#from sys import base_exec_prefix
 import krpc
 from time import sleep
 
@@ -40,7 +39,6 @@ def Lauch(alt=0, sas=False):
 def Orbitador(alt=70000):
     global vessel
     global altitude
-    #Twr = vessel.thrust / vessel.mass
     altitude = addStream(vessel.flight(), 'mean_altitude')
     apoastro = addStream(vessel.orbit, 'apoapsis_altitude')
     periastro = addStream(vessel.orbit, 'periapsis_altitude')
@@ -100,17 +98,10 @@ def verticalLanding():
         if surface_altitude() < 100:
             pouso()
             break
-            #vessel.control.throttle = 1.2 * vessel.mass / vessel.max_thrust
         
         if Speed() <= 50.00 and direction_movement() == -1:
             vessel.control.throttle = 0.94 * 9.6 * vessel.mass / vessel.max_thrust
-            """
-            if Speed() < 0.5:
-                vessel.control.throttle = 0
-                break
-            """
-        
-  
+           
 
 def direction_movement():
     altitude = addStream(vessel.flight(), 'mean_altitude')
@@ -141,7 +132,6 @@ def pouso():
     Speed = addStream(vessel.flight(veloref), 'speed')
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90)
-    #vessel.control.throttle = 1.00 * 9.6 * vessel.mass / 3000000
     vessel.control.activate_next_stage()
     sleep(0.1)
     
@@ -155,5 +145,4 @@ def pouso():
             vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
             if Speed() < 0.5:
                 vessel.control.throttle = 0
-                break
-           
+                break  
