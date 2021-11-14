@@ -1,0 +1,4 @@
+main
+	UART1_Init
+	tx_func
+		UART1_Write
