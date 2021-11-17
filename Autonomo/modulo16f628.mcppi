@@ -2,15 +2,15 @@
 Name=P16F628A
 Clock=16000000
 [FILES]
-File0=Robo_16f.c
+File0=modulo16f628.c
 Count=1
 [BINARIES]
 Count=0
 [IMAGES]
 Count=0
-ActiveImageIndex=0
+ActiveImageIndex=-1
 [OPENED_FILES]
-File0=Robo_16f.c
+File0=modulo16f628.c
 Count=1
 [EEPROM]
 Count=0
@@ -19,10 +19,7 @@ Count=0
 [OTHER_FILES]
 Count=0
 [SEARCH_PATH]
-Path0=C:\Users\Public\Documents\Mikroelektronika\mikroC PRO for PIC\Defs\
-Path1=C:\Users\Public\Documents\Mikroelektronika\mikroC PRO for PIC\Uses\P16\
-Path2=C:\Users\Israel\Documents\MeuPc\Projetos\codigos de pic c++\autonomo\
-Count=3
+Count=0
 [HEADER_PATH]
 Count=0
 [HEADERS]
@@ -36,7 +33,7 @@ Value=0
 [BUILD_TYPE]
 Value=0
 [ACTIVE_TAB]
-Value=
+Value=modulo16f628.c
 [USE_EEPROM]
 Value=0
 [USE_HEAP]
@@ -46,6 +43,7 @@ Value=0
 [EEPROM_DEFINITION]
 Value=
 [EXPANDED_NODES]
-Count=0
+0=zona16f.mcppi
+Count=1
 [LIB_EXPANDED_NODES]
 Count=0
