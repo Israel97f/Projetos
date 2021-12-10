@@ -8,7 +8,11 @@
 *.dlt
 *.hex
 *.log
-*.Ist
+*.lst
 *.mcl
 *.mcppi
 *.dic
+*.DSN
+*.PWI
+*.DBK
+*.cof

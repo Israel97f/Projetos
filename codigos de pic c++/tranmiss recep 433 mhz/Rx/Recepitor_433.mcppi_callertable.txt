@@ -1,0 +1,13 @@
+main
+	__CC2DW
+		____DoICP
+	UART1_Init
+	PWM1_Init
+	PWM1_Start
+	PWM1_Set_Duty
+		Mul_16X16_U
+	ADC_Read
+		Delay_22us
+interrupt
+	rx_func
+		UART1_Read
