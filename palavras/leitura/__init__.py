@@ -48,3 +48,4 @@ def escreverArquivo(arq, nome='<desconhecido>', idade=0):
             print('\033[32mPessoa cadastrada com sucesso\033[m')
     finally:
         a.close()
+        
