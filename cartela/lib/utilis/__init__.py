@@ -32,7 +32,7 @@ def exibirCartela(lista, cor):
             print(f'{c:^12}', end='')
             cont += 1
         else:
-            print(f'\033[40:33m{c:^12}\033[m', end='')
+            print(f'\033[33m{c:^12}\033[m', end='')
             cont += 1
         i += 1
     print('')
