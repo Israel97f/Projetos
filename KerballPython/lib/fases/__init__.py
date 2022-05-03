@@ -1,3 +1,4 @@
+from logging import exception
 import krpc
 from time import sleep
 
@@ -16,8 +17,14 @@ def IntConect():
             else:
                 continue
         else:
+            global vessel
+            vessel = conn.space_center.active_vessel
             print(f'\033[32m{"-" * 8}Conexão feita com sucesso{"-" * 8}\033[m')
             break
+
+def Disconect():
+    global conn
+    conn.close()
 
 
 def Lauch(alt=0, sas=False):
@@ -25,7 +32,7 @@ def Lauch(alt=0, sas=False):
     global vessel
     global apoastro
     
-    vessel = conn.space_center.active_vessel
+    #vessel = conn.space_center.active_vessel
     apoastro = addStream(vessel.orbit, 'apoapsis_altitude')
     vessel.control.throttle = 1
     vessel.control.activate_next_stage()
@@ -45,14 +52,15 @@ def Orbitador(alt=70000):
     vessel.auto_pilot.sas = False
     vessel.auto_pilot.engage()
     while True:
-        vessel.auto_pilot.target_pitch_and_heading(90 - (90 * (alt / altitude())), 90)
+        vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * ( altitude() / alt)), 90)
+        #vessel.auto_pilot.target_pitch_and_heading(75, 90)
         vessel.control.throttle = vessel.mass * 9.6 * 1.4 /( vessel.max_thrust)
         if apoastro() > alt:
             vessel.control.throttle = 0
             break
         
     while True:
-        if periastro() - apoastro() < 100:
+        if periastro() - apoastro() > -100:
             if apoastro() - altitude() < 300:
                 vessel.control.throttle = 1
             else:
@@ -79,7 +87,7 @@ def verticalLanding():
         if direction_movement() == -1:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             try:
-                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 120
+                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 200
             except:
                 d = 1000
             print('-' * 20)
@@ -94,8 +102,14 @@ def verticalLanding():
 
 
     while True:
+        try:
+            delta = ((3 ** 2 - 50 ** 2) / ((-2) * (((vessel.max_thrust / vessel.mass ) * 0.8) - (9.81))))
+        except:
+            delta = 250
 
-        if surface_altitude() < 100:
+        print(delta)
+
+        if surface_altitude() < (delta + 200):
             pouso()
             break
         
@@ -132,13 +146,14 @@ def pouso():
     Speed = addStream(vessel.flight(veloref), 'speed')
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90)
-    vessel.control.activate_next_stage()
+    #vessel.control.activate_next_stage()
+    vessel.control.gear = True
     sleep(0.1)
     
     
     while True:
         if Speed() > 5.0 and direction_movement() == -1:
-            vessel.control.throttle = 0.6 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
+            vessel.control.throttle = 0.8 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
         elif direction_movement() == 1:
             vessel.control.throttle = 0.93 * 9.6 * vessel.mass / vessel.max_thrust
         else:
@@ -146,3 +161,10 @@ def pouso():
             if Speed() < 0.5:
                 vessel.control.throttle = 0
                 break  
+
+def testegear():
+    global vessel
+    vessel = conn.space_center.active_vessel
+    vessel.control.gear = True
+    sleep(10)
+    vessel.control.gear = False

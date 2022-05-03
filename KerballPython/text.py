@@ -1,11 +1,10 @@
 import lib.fases
-import time
+from time import sleep
 
 
 lib.fases.IntConect()
-lib.fases.Lauch(10000, True)
+sleep(9)
+#lib.fases.Lauch(4000, True)
 lib.fases.verticalLanding()
-#time.sleep(5)
-#lib.fases.pouso()
-
+lib.fases.Disconect()
 print('ok')

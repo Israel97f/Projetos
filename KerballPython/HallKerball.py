@@ -6,10 +6,11 @@ import lib.Mathe
 # Inicinado a conexão
 lib.fases.IntConect()
 lib.Mathe.Contador(10)
-lib.fases.Lauch()
-lib.fases.Orbitador(3000)
+lib.fases.Lauch(200)
+lib.fases.Orbitador(80000)
 
 print('Tudo ok')
+lib.fases.Disconect()
 #pip install krpc
 
 #python -m pip install
