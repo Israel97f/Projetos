@@ -1,4 +1,5 @@
 from logging import exception
+from xml.sax.handler import feature_external_pes
 import krpc
 from time import sleep
 
@@ -41,6 +42,8 @@ def Lauch(alt=0, sas=False):
         if apoastro() >= alt:
             vessel.control.throttle = 0
             break
+
+        fuel_chek()
         
 
 def Orbitador(alt=70000):
@@ -51,16 +54,26 @@ def Orbitador(alt=70000):
     periastro = addStream(vessel.orbit, 'periapsis_altitude')
     vessel.auto_pilot.sas = False
     vessel.auto_pilot.engage()
+
+
     while True:
-        vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * ( altitude() / alt)), 90)
-        #vessel.auto_pilot.target_pitch_and_heading(75, 90)
-        vessel.control.throttle = vessel.mass * 9.6 * 1.4 /( vessel.max_thrust)
+        fuel_chek()       
+        frac = altitude()/45000
+        if frac > 1:
+            frac = 1
+
+        vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * frac), 90)
+        
+        if apoastro() > (alt * 0.9):
+            vessel.control.throttle = vessel.mass * 9.6 * 1.4 /( vessel.max_thrust)
+
         if apoastro() > alt:
             vessel.control.throttle = 0
             break
         
     while True:
-        if periastro() - apoastro() > -100:
+        fuel_chek()
+        if abs(periastro() - apoastro()) < 100:
             if apoastro() - altitude() < 300:
                 vessel.control.throttle = 1
             else:
@@ -96,7 +109,7 @@ def verticalLanding():
             print(Speed() ** 2)
             print(Speed() * Speed())
 
-            if surface_altitude() <= d:
+            if surface_altitude() <= d and d < 12000:
                 vessel.control.throttle = 1
                 break
 
@@ -162,9 +175,40 @@ def pouso():
                 vessel.control.throttle = 0
                 break  
 
-def testegear():
+def fuel_chek():
+    global stage    
+    while len(vessel.parts.in_stage(stage)) > 0: # calcula quantos estagios a nave tem
+        stage += 1 
+
+    engine = vessel.parts.engines[-1].has_fuel
+    if engine == False and stage > 0 :
+        vessel.control.throttle = 0
+        vessel.control.activate_next_stage()
+        sleep(3)
+        vessel.control.throttle = 1
+        stage -= 1
+
+
+def teste():
     global vessel
-    vessel = conn.space_center.active_vessel
-    vessel.control.gear = True
-    sleep(10)
-    vessel.control.gear = False
+    #part = conn.space_center.active_vessel.
+    cont = 0
+    while True:
+        stage = 10
+        
+        fuel = vessel.resources_in_decouple_stage(stage, False)
+        fuell = list()
+        fuell = vessel.parts.in_stage(-1)  #.engine.has_fuel
+        engine = vessel.parts.engines[2].has_fuel
+        sleep(3)
+        cont += 1
+        i = 0
+        while len(vessel.parts.in_stage(i)) > 0:
+            i += 1
+        
+        print(i)
+        print(fuell)
+        print(engine)
+        
+        if cont > 5:
+            break
