@@ -1,5 +1,6 @@
-from logging import exception
-from xml.sax.handler import feature_external_pes
+#from enum import Flag
+#from logging import exception
+#from xml.sax.handler import feature_external_pes
 import krpc
 from time import sleep
 
@@ -19,7 +20,12 @@ def IntConect():
                 continue
         else:
             global vessel
+            global vessel_alt
+            global veloref
             vessel = conn.space_center.active_vessel
+            veloref = vessel.orbit.body.reference_frame            
+            vessel_alt = vessel.flight( veloref).surface_altitude         
+
             print(f'\033[32m{"-" * 8}Conexão feita com sucesso{"-" * 8}\033[m')
             break
 
@@ -49,12 +55,16 @@ def Lauch(alt=0, sas=False):
 def Orbitador(alt=70000):
     global vessel
     global altitude
+    global veloref
     altitude = addStream(vessel.flight(), 'mean_altitude')
     apoastro = addStream(vessel.orbit, 'apoapsis_altitude')
     periastro = addStream(vessel.orbit, 'periapsis_altitude')
+    veloref = vessel.orbit.body.reference_frame
+    Speed = addStream(vessel.flight(veloref), 'speed')
     vessel.auto_pilot.sas = False
     vessel.auto_pilot.engage()
-
+    vessel.control.throttle = 1
+    first_stage = 0
 
     while True:
         fuel_chek()       
@@ -73,12 +83,19 @@ def Orbitador(alt=70000):
         
     while True:
         fuel_chek()
-        if abs(periastro() - apoastro()) < 100:
-            if apoastro() - altitude() < 300:
+        if abs(periastro() - apoastro()) > 100 and periastro() < alt:
+            if apoastro() - altitude() < 700:
+                if Speed() > 2000 and first_stage == 0:
+                    vessel.control.throtte = 0
+                    vessel.control.activate_next_stage()
+                    sleep(2)
+                    first_stage = 1
+
                 vessel.control.throttle = 1
+                print(Speed())
             else:
                 vessel.control.throttle = 0
-                sleep(3)
+                sleep(1)
         else:
             vessel.control.throttle = 0
             break
@@ -89,6 +106,7 @@ def Orbitador(alt=70000):
 def verticalLanding():
     global vessel
     global veloref 
+    global surface_altitude
     veloref = vessel.orbit.body.reference_frame
     Speed = addStream(vessel.flight(veloref), 'speed')
     surface_altitude = addStream(vessel.flight(), 'surface_altitude')
@@ -100,7 +118,7 @@ def verticalLanding():
         if direction_movement() == -1:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             try:
-                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 200
+                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 100
             except:
                 d = 1000
             print('-' * 20)
@@ -154,9 +172,11 @@ def addStream(classe, metodo):
 
 def pouso():
     global vessel
+    global surface_altitude
     vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
-    Speed = addStream(vessel.flight(veloref), 'speed')
+    #Speed = addStream(vessel.flight(veloref), 'speed')
+    vertical_speed = addStream(vessel.flight(veloref), 'vertical_speed')
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90)
     #vessel.control.activate_next_stage()
@@ -165,18 +185,22 @@ def pouso():
     
     
     while True:
-        if Speed() > 5.0 and direction_movement() == -1:
+        if vertical_speed() < -5.0:
             vessel.control.throttle = 0.8 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
-        elif direction_movement() == 1:
+        elif vertical_speed() > 0:
             vessel.control.throttle = 0.93 * 9.6 * vessel.mass / vessel.max_thrust
         else:
             vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
-            if Speed() < 0.5:
+            if vessel.situation == vessel.situation.landed or vessel.situation == vessel.situation.splashed:
                 vessel.control.throttle = 0
+                vessel.auto_pilot.disengage()
+                vessel.auto_pilot.sas = True
                 break  
 
+
 def fuel_chek():
-    global stage    
+    global stage 
+    stage = int()   
     while len(vessel.parts.in_stage(stage)) > 0: # calcula quantos estagios a nave tem
         stage += 1 
 
@@ -191,24 +215,24 @@ def fuel_chek():
 
 def teste():
     global vessel
+    global veloref 
+    global vessel_alt
+    global surface_altitude
+    veloref = vessel.orbit.body.reference_frame
+    
+    
     #part = conn.space_center.active_vessel.
-    cont = 0
+    vertical_speed = addStream(vessel.flight(veloref), 'vertical_speed')
+    i = 0
     while True:
-        stage = 10
-        
-        fuel = vessel.resources_in_decouple_stage(stage, False)
-        fuell = list()
-        fuell = vessel.parts.in_stage(-1)  #.engine.has_fuel
-        engine = vessel.parts.engines[2].has_fuel
-        sleep(3)
-        cont += 1
-        i = 0
-        while len(vessel.parts.in_stage(i)) > 0:
-            i += 1
-        
-        print(i)
-        print(fuell)
-        print(engine)
-        
-        if cont > 5:
-            break
+       print(surface_altitude())
+       print(vessel.situation == vessel.situation.landed)
+       sleep(2)
+       i += 1
+       if i > 10:
+           break
+
+
+def test_2():
+    global surface_altitude
+    surface_altitude = addStream(vessel.flight(), 'surface_altitude')
