@@ -141,7 +141,7 @@ def verticalLanding():
 
         print(delta)
 
-        if surface_altitude() < (delta + 100):
+        if surface_altitude() < (delta + 50):
             pouso()
             break
         
