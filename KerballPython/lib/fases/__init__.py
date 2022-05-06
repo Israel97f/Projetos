@@ -188,14 +188,14 @@ def pouso():
     
     while True:
         ### precisa de melhorias
-        if  horizontal_speed() > 2 and surface_altitude() < 100:
-            vessel.auto_pilot.disengage()
-            vessel.auto_pilot.sas = True
-            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
-        else:
-            vessel.auto_pilot.sas = False
-            vessel.auto_pilot.engage()
-            vessel.auto_pilot.target_pitch_and_heading(90, 90)
+        #if  horizontal_speed() > 2 and surface_altitude() < 100 and  0 > vertical_speed() > -5.0:
+        #   vessel.auto_pilot.disengage()
+        #   vessel.auto_pilot.sas = True
+        #   vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+        #else:
+        #   vessel.auto_pilot.sas = False
+        #   vessel.auto_pilot.engage()
+        #   vessel.auto_pilot.target_pitch_and_heading(90, 90)
         ###===========
         if vertical_speed() < -5.0:
             vessel.control.throttle = 0.8 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
