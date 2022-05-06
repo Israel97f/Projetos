@@ -83,10 +83,11 @@ def Orbitador(alt=70000):
         
     while True:
         fuel_chek()
-        if abs(periastro() - apoastro()) > 100 and periastro() < alt:
+        if abs(periastro() - apoastro()) > 10000 or periastro() < 70000:
             if apoastro() - altitude() < 700:
-                if Speed() > 2000 and first_stage == 0:
-                    vessel.control.throtte = 0
+                if Speed() > 1900 and first_stage == 0:
+                    vessel.control.throttle = 0
+                    sleep(0.1)
                     vessel.control.activate_next_stage()
                     sleep(2)
                     first_stage = 1
@@ -140,7 +141,7 @@ def verticalLanding():
 
         print(delta)
 
-        if surface_altitude() < (delta + 200):
+        if surface_altitude() < (delta + 100):
             pouso()
             break
         
@@ -177,6 +178,7 @@ def pouso():
     veloref = vessel.orbit.body.reference_frame
     #Speed = addStream(vessel.flight(veloref), 'speed')
     vertical_speed = addStream(vessel.flight(veloref), 'vertical_speed')
+    horizontal_speed = addStream(vessel.flight(veloref), 'horizontal_speed')
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90)
     #vessel.control.activate_next_stage()
@@ -185,6 +187,16 @@ def pouso():
     
     
     while True:
+        ### precisa de melhorias
+        if  horizontal_speed() > 2 and surface_altitude() < 100:
+            vessel.auto_pilot.disengage()
+            vessel.auto_pilot.sas = True
+            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+        else:
+            vessel.auto_pilot.sas = False
+            vessel.auto_pilot.engage()
+            vessel.auto_pilot.target_pitch_and_heading(90, 90)
+        ###===========
         if vertical_speed() < -5.0:
             vessel.control.throttle = 0.8 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
         elif vertical_speed() > 0:
