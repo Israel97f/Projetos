@@ -96,6 +96,7 @@ def verticalLanding():
     global Speed
     global vertical_speed 
     global surface_altitude
+    global surface_gravity
 
     vessel.auto_pilot.sas = True    
     vessel.control.throttle = 0
@@ -105,7 +106,7 @@ def verticalLanding():
         if vertical_speed() < 0:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde            
             try:
-                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 100
+                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - surface_gravity))) + 100
             except:
                 d = 1000
             
@@ -117,7 +118,7 @@ def verticalLanding():
 
     while True:
         try:
-            delta = ((3 ** 2 - 50 ** 2) / ((-2) * (((vessel.max_thrust / vessel.mass ) * 0.8) - (9.81))))
+            delta = ((3 ** 2 - 50 ** 2) / ((-2) * (((vessel.max_thrust / vessel.mass ) * 0.8) - (surface_gravity))))
         except:
             delta = 250
     
@@ -126,7 +127,7 @@ def verticalLanding():
             break
         
         if Speed() <= 50.00 and vertical_speed() < 0:
-            vessel.control.throttle = 0.94 * 9.6 * vessel.mass / vessel.max_thrust
+            vessel.control.throttle = 0.99 * surface_gravity * vessel.mass / vessel.max_thrust
                  
 
 def  __addStream(classe, metodo):
@@ -139,6 +140,7 @@ def pouso():
     global surface_altitude   
     global vertical_speed 
     global horizontal_speed 
+    global surface_gravity
 
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90) 
@@ -150,9 +152,9 @@ def pouso():
         if vertical_speed() < -5.0:
             vessel.control.throttle = 0.8 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
         elif vertical_speed() > 0:
-            vessel.control.throttle = 0.93 * 9.6 * vessel.mass / vessel.max_thrust
+            vessel.control.throttle = 0.93 * surface_gravity * vessel.mass / vessel.max_thrust
         else:
-            vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
+            vessel.control.throttle = surface_gravity * vessel.mass / vessel.max_thrust
             if vessel.situation == vessel.situation.landed or vessel.situation == vessel.situation.splashed:
                 vessel.control.throttle = 0
                 vessel.auto_pilot.disengage()
@@ -185,9 +187,11 @@ def __telemetry():
     global Speed
     global vertical_speed
     global horizontal_speed
+    global surface_gravity
 
     vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
+    surface_gravity = vessel.orbit.body.surface_gravity
 
     apoastro = __addStream(vessel.orbit, 'apoapsis_altitude')
     periastro = __addStream(vessel.orbit, 'periapsis_altitude')
@@ -196,3 +200,10 @@ def __telemetry():
     Speed = __addStream(vessel.flight(veloref), 'speed')
     vertical_speed = __addStream(vessel.flight(veloref), 'vertical_speed')
     horizontal_speed = __addStream(vessel.flight(veloref), 'horizontal_speed')
+
+
+def test():
+    #global conn
+    global vessel
+    print(vessel.orbit.body.gravitational_parameter)
+    print(vessel.orbit.body.surface_gravity)
