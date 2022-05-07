@@ -95,8 +95,7 @@ def verticalLanding():
     global vessel
     global Speed
     global vertical_speed 
-    global surface_altitude    
-    global surface_altitude 
+    global surface_altitude
 
     vessel.auto_pilot.sas = True    
     vessel.control.throttle = 0
