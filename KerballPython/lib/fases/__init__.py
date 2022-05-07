@@ -101,16 +101,20 @@ def verticalLanding():
     vessel.control.throttle = 0
     
     while True:
+        print('p1')
         if vertical_speed() > 0:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+            print('p2')
             try:
                 d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 100
             except:
                 d = 1000
             
             if surface_altitude() <= d and d < 12000:
+                print('p3')
                 vessel.control.throttle = 1
                 break
+        sleep(0.1)
 
 
     while True:
