@@ -202,8 +202,32 @@ def __telemetry():
     horizontal_speed = __addStream(vessel.flight(veloref), 'horizontal_speed')
 
 
+def get_telemetry():
+    global apoastro
+    global periastro
+    global altitude
+    global surface_altitude
+    global Speed
+    global vertical_speed
+    global horizontal_speed
+    global surface_gravity
+    return [ apoastro(), 
+    periastro(), 
+    altitude(),
+    surface_altitude(),
+    Speed(),
+    vertical_speed(),
+    horizontal_speed(),
+    surface_gravity]
+
+
 def test():
     #global conn
     global vessel
     print(vessel.orbit.body.gravitational_parameter)
     print(vessel.orbit.body.surface_gravity)
+
+
+sdf = bool()
+
+print(sdf)
