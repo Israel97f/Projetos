@@ -1,8 +1,8 @@
-from sqlite3 import connect
-import lib.fases
+lista1 = (1,2,3,4,5,6)
+lista2 = ('a','b','c','d','e', 'f')
 
-lib.fases.IntConect()
-#lib.fases.Lauch(50000, True)
-#lib.fases.test_2()
-lib.fases.test()
-lib.fases.Disconect()
+cont = 0
+for v in lista1:
+   
+    print (lista2[cont],v)
+    cont += 1
