@@ -27,12 +27,13 @@ def atualiza_display(display):
         if c != '':
             display.delete(c)
           
-    print(treeSelect)
+    
     cont = 0
     for c in list:        
         display.insert("",
             "end", values=(names[cont], c)
         )
+        print(names[cont], c)
         cont +=1
     
 
@@ -67,7 +68,7 @@ def to_connect (but, display):
         connected = False
 
     but['text'] = con
-    fases.get_parametro(atualiza_display)
+    fases.get_parametro(atualiza_display, display)
     #atualiza_display(display)
     #print(fases.get_telemetry())
     
@@ -82,11 +83,12 @@ def main_frame(frame_atual=None):
     display = ttk.Treeview(display_frame, columns=('nomes', 'valores'), show='tree',height=8)
     display.column('#0', minwidth=0,width=10)
     display.column('nomes', minwidth=0,width=100)
-    display.column('valores', minwidth=0,width=100)  
+    display.column('valores', minwidth=0,width=100) 
+    fases.get_parametro(atualiza_display, display) 
     
     b1 = ttk.Button(painel_frame, text=con, width=15, command= lambda: to_connect(b1, display))
     b2 = ttk.Button(painel_frame, text='Orbitar', width=15, command= lambda: screen_1(frame))
-    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land())
+    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(b3))
     b1.grid(row=0, column=0, padx=10, pady=10)
     b2.grid(row=1, column=0, padx=10, pady=10)
     b3.grid(row=2, column=0, padx=10, pady=10)
@@ -107,6 +109,7 @@ def screen_1(frame_atual=None):
     display.column('#0', minwidth=0,width=10)
     display.column('nomes', minwidth=0,width=100)
     display.column('valores', minwidth=0,width=100)  
+    fases.get_parametro(atualiza_display, display)
 
     b1 = ttk.Button(painel_frame, text='Lançar', width=15, command=lambda: orbit(b1))
     b2 = ttk.Button(painel_frame, text='voltar', width=15, command=lambda: main_frame(frame))

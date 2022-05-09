@@ -3,15 +3,19 @@ from time import sleep
 
 # experimemtal -------
 param = None
-def get_parametro(parametro=None):
+objec = None
+def get_parametro(parametro=None, obj=None):
     global param
+    global objec 
     param = parametro
+    objec = obj
 
 
 def atualiza_display():
     global param
+    global objec 
     if param != None:
-        param()
+        param(objec)
 #----------------------
 
 
