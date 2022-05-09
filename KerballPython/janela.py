@@ -8,7 +8,7 @@ connected = bool()
 con = 'Conectar'
 
 def atualiza_display(display):
-    list = [0,1,3,4,5]#fases.get_telemetry()
+    list = fases.get_telemetry()
     names = ('apoastro:', 
     'periastro:', 
     'altitude:',
@@ -57,17 +57,18 @@ def to_connect (but, display):
     global connected
     global con
     if connected == False:
-        #fases.IntConect()
+       
+        fases.IntConect()
         con = 'Deconectar'
         connected = True
     else:
-        #fases.Disconect()
+        fases.Disconect()
         con = 'Conectar'
         connected = False
 
     but['text'] = con
-    
-    atualiza_display(display)
+    fases.get_parametro(atualiza_display)
+    #atualiza_display(display)
     #print(fases.get_telemetry())
     
 
@@ -102,7 +103,11 @@ def screen_1(frame_atual=None):
     frame = ttk.Frame()
     painel_frame = ttk.Frame(frame)
     display_frame  = ttk.Frame(frame)
-    display = ttk.Treeview(display_frame,  width=35, height=10, state='disabled')
+    display = ttk.Treeview(display_frame, columns=('nomes', 'valores'), show='tree',height=8)
+    display.column('#0', minwidth=0,width=10)
+    display.column('nomes', minwidth=0,width=100)
+    display.column('valores', minwidth=0,width=100)  
+
     b1 = ttk.Button(painel_frame, text='Lançar', width=15, command=lambda: orbit(b1))
     b2 = ttk.Button(painel_frame, text='voltar', width=15, command=lambda: main_frame(frame))
     #b3 = ttk.Button(painel_frame, text='B3', width=15, command=tela1)

@@ -1,6 +1,19 @@
 import krpc
 from time import sleep
 
+# experimemtal -------
+param = None
+def get_parametro(parametro=None):
+    global param
+    param = parametro
+
+
+def atualiza_display():
+    global param
+    if param != None:
+        param()
+#----------------------
+
 
 def IntConect():
     i = 0
@@ -39,6 +52,8 @@ def Lauch(alt=0, sas=False):
             break
 
         __fuel_chek()
+        atualiza_display()
+
         
 
 def Orbitador(alt=70000):
@@ -67,6 +82,7 @@ def Orbitador(alt=70000):
         if apoastro() > alt:
             vessel.control.throttle = 0
             break
+    atualiza_display()
         
     while True:
         __fuel_chek()
@@ -86,9 +102,10 @@ def Orbitador(alt=70000):
                 sleep(1)
         else:
             vessel.control.throttle = 0
+            vessel.auto_pilot.disengage()
             break
 
-    vessel.auto_pilot.disengage()
+        atualiza_display()
 
 
 def verticalLanding():
@@ -114,6 +131,7 @@ def verticalLanding():
                 vessel.control.throttle = 1
                 break
         sleep(0.1)
+        atualiza_display()
 
 
     while True:
@@ -128,7 +146,8 @@ def verticalLanding():
         
         if Speed() <= 50.00 and vertical_speed() < 0:
             vessel.control.throttle = 0.99 * surface_gravity * vessel.mass / vessel.max_thrust
-                 
+        atualiza_display()
+
 
 def  __addStream(classe, metodo):
     global conn
@@ -159,7 +178,8 @@ def pouso():
                 vessel.control.throttle = 0
                 vessel.auto_pilot.disengage()
                 vessel.auto_pilot.sas = True
-                break  
+                break 
+        atualiza_display()
 
 
 def __fuel_chek():
