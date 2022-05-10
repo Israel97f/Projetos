@@ -2,8 +2,9 @@ from tkinter import Frame, Tk, font, ttk, Text
 from ttkbootstrap import Style
 from time import sleep
 
-def função_1(display):
-    
+
+def função_1():
+    global telemetry_channel
     i = 0
     lista = list()
     while i < 1500:
@@ -11,7 +12,7 @@ def função_1(display):
         i += 1
         lista.append(i)
         if len(lista) > 4:
-            atualiza_display(display ,lista[:])
+            atualiza_display(telemetry_channel ,lista[:])
             lista.clear()
         #display.after(10,janela.update())
         sleep(0.01)
@@ -79,6 +80,7 @@ def main_frame(frame_atual=None):
 
 
 def screen_1(frame_atual=None):
+    global telemetry_channel
     if frame_atual != None:
         frame_atual.destroy()   
         
@@ -86,6 +88,7 @@ def screen_1(frame_atual=None):
     painel_frame = ttk.Frame(frame)
     display_frame  = ttk.Frame(frame)
     display = ttk.Treeview(display_frame, columns=('nomes', 'valores'), show='tree',height=8)
+    telemetry_channel = display
     display.column('#0', minwidth=0,width=10)
     display.column('nomes', minwidth=0,width=100)
     display.column('valores', minwidth=0,width=100)  
@@ -108,6 +111,5 @@ janela = style.master
 #janela.geometry('350x190')
 janela.title('Hall')
 main_frame()
-
 janela.mainloop()
     
