@@ -6,18 +6,21 @@ def função_1(display):
     
     i = 0
     lista = list()
-    while i < 15:
+    while i < 1500:
         
         i += 1
         lista.append(i)
         if len(lista) > 4:
             atualiza_display(display ,lista[:])
             lista.clear()
-        display.after (1000)
+        #display.after(10,janela.update())
+        sleep(0.01)
+        janela.update()
+        
 
 
-def função_2():
-    pass
+def função_2(disp, fra):
+    fra.after(10,função_1(disp))
 
 
 def atualiza_display(display, lista):
@@ -65,7 +68,7 @@ def main_frame(frame_atual=None):
     
     b1 = ttk.Button(painel_frame, text='conectar', width=15, command= lambda:função_1(display))
     b2 = ttk.Button(painel_frame, text='Orbitar', width=15, command= lambda: função_1(display))
-    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: função_1(display))
+    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: função_2(display,frame))
     b1.grid(row=0, column=0, padx=10, pady=10)
     b2.grid(row=1, column=0, padx=10, pady=10)
     b3.grid(row=2, column=0, padx=10, pady=10)
@@ -105,5 +108,6 @@ janela = style.master
 #janela.geometry('350x190')
 janela.title('Hall')
 main_frame()
+
 janela.mainloop()
     

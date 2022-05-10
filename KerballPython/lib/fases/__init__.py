@@ -86,7 +86,7 @@ def Orbitador(alt=70000):
         if apoastro() > alt:
             vessel.control.throttle = 0
             break
-    atualiza_display()
+        atualiza_display()
         
     while True:
         __fuel_chek()
@@ -251,7 +251,3 @@ def test():
     print(vessel.orbit.body.gravitational_parameter)
     print(vessel.orbit.body.surface_gravity)
 
-
-sdf = bool()
-
-print(sdf)

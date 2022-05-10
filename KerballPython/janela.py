@@ -27,7 +27,6 @@ def atualiza_display(display):
         if c != '':
             display.delete(c)
           
-    
     cont = 0
     for c in list:        
         display.insert("",
@@ -35,9 +34,11 @@ def atualiza_display(display):
         )
         print(names[cont], c)
         cont +=1
+    janela.update()
     
 
-def orbit(but):
+def orbit(but,  display):
+    fases.get_parametro(atualiza_display, display)
     but.configure(state='disabled')
     lib.Mathe.Contador(10)
     fases.Lauch(1000, True)
@@ -46,12 +47,19 @@ def orbit(but):
     print('Tudo ok')
 
 
-def land(but):
+def land(but,  display):
+    fases.get_parametro(atualiza_display, display)
     but.configure(state='normal')
     fases.Lauch(7000, True)
     fases.verticalLanding()
     fases.Disconect()
     print('ok')
+
+
+def launch(but,  display):
+    fases.get_parametro(atualiza_display, display)
+    fases.Lauch(7000, True)
+    fases.Disconect()
 
 
 def to_connect (but, display, frame):
@@ -69,9 +77,6 @@ def to_connect (but, display, frame):
         connected = False
 
     but['text'] = con
-    fases.get_parametro(atualiza_display, display)
-    #atualiza_display(display)
-    #print(fases.get_telemetry())
     
 
 def main_frame(frame_atual=None):
@@ -79,21 +84,18 @@ def main_frame(frame_atual=None):
         frame_atual.destroy()
         
     frame = ttk.Frame()
-    painel_frame = ttk.Frame(frame)
+    
     display_frame  = ttk.Frame(frame)
     display = ttk.Treeview(display_frame, columns=('nomes', 'valores'), show='tree',height=8)
     display.column('#0', minwidth=0,width=10)
     display.column('nomes', minwidth=0,width=100)
     display.column('valores', minwidth=0,width=100) 
-    fases.get_parametro(atualiza_display, display) 
-    
-    b1 = ttk.Button(painel_frame, text='Conectar', width=15, command= lambda: to_connect(b1, display, frame))
-    #b2 = ttk.Button(painel_frame, text='Orbitar', width=15, command= lambda: screen_1(frame))
-    #b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(b3))
-    b1.grid(row=0, column=0, padx=10, pady=10)
-    #b2.grid(row=1, column=0, padx=10, pady=10)
-    #b3.grid(row=2, column=0, padx=10, pady=10)
     display.grid(row=0, column=1, padx=10, pady=10)
+
+    painel_frame = ttk.Frame(frame)
+    b1 = ttk.Button(painel_frame, text='Conectar', width=15, command= lambda: to_connect(b1, display, frame))
+    b1.grid(row=0, column=0, padx=10, pady=10)
+
     painel_frame.grid(row=0, column=0)
     display_frame.grid(row=0, column=1) 
     frame.pack()
@@ -112,17 +114,14 @@ def screen_1(frame_atual=None):
     display.column('valores', minwidth=0,width=100)  
     fases.get_parametro(atualiza_display, display)
     display.grid(row=0, column=0, padx=10, pady=10)
-    #display_frame.pack()
 
     painel_frame = ttk.Frame(frame)
     b1 = ttk.Button(painel_frame, text='Lançar', width=15, command=lambda: screen_3(frame))
     b2 = ttk.Button(painel_frame, text='Orbitar', width=15, command=lambda: screen_2(frame))
-    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(b3))
+    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(b3,  display))
     b1.grid(row=0, column=0, padx=10, pady=10)
     b2.grid(row=1, column=0, padx=10, pady=10)
     b3.grid(row=2, column=0, padx=10, pady=10)
-    #painel_frame.pack()
-
     
     painel_frame.grid(row=0, column=0)
     display_frame.grid(row=0, column=1)
@@ -136,21 +135,20 @@ def screen_2(frame_atual=None):
         frame_atual.destroy()   
         
     frame = ttk.Frame()
-    painel_frame = ttk.Frame(frame)
+    
     display_frame  = ttk.Frame(frame)
     display = ttk.Treeview(display_frame, columns=('nomes', 'valores'), show='tree',height=8)
     display.column('#0', minwidth=0,width=10)
     display.column('nomes', minwidth=0,width=100)
-    display.column('valores', minwidth=0,width=100)  
-    fases.get_parametro(atualiza_display, display)
+    display.column('valores', minwidth=0,width=100) 
+    display.grid(row=0, column=1, padx=10, pady=10) 
 
-    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: orbit(b1))
+    painel_frame = ttk.Frame(frame)
+    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: orbit(b1,  display))
     b2 = ttk.Button(painel_frame, text='volta', width=15, command=lambda: screen_1(frame))
-    #b3 = ttk.Button(painel_frame, text='Pousar', width=15, command=)
     b1.grid(row=0, column=0, padx=10, pady=10)
     b2.grid(row=1, column=0, padx=10, pady=10)
-    #b3.grid(row=2, column=0, padx=10, pady=10)
-    display.grid(row=0, column=1, padx=10, pady=10)
+    
     painel_frame.grid(row=0, column=0)
     display_frame.grid(row=0, column=1)
     frame.pack()
@@ -162,31 +160,29 @@ def screen_3(frame_atual=None):
         frame_atual.destroy()   
         
     frame = ttk.Frame()
-    painel_frame = ttk.Frame(frame)
+
+    
     display_frame  = ttk.Frame(frame)
     display = ttk.Treeview(display_frame, columns=('nomes', 'valores'), show='tree',height=8)
     display.column('#0', minwidth=0,width=10)
     display.column('nomes', minwidth=0,width=100)
     display.column('valores', minwidth=0,width=100)  
-    fases.get_parametro(atualiza_display, display)
+    display.grid(row=0, column=1, padx=10, pady=10)
 
-    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: orbit(b1))
+    painel_frame = ttk.Frame(frame)
+    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: launch(b1,  display))
     b2 = ttk.Button(painel_frame, text='volta', width=15, command=lambda: screen_1(frame))
-    #b3 = ttk.Button(painel_frame, text='Pousar', width=15, command=)
     b1.grid(row=0, column=0, padx=10, pady=10)
     b2.grid(row=1, column=0, padx=10, pady=10)
-    #b3.grid(row=2, column=0, padx=10, pady=10)
-    display.grid(row=0, column=1, padx=10, pady=10)
+    
     painel_frame.grid(row=0, column=0)
     display_frame.grid(row=0, column=1)
     frame.pack()
-    #frame.tkraise()
 
 
 style = Style()
 janela = style.master
-#janela.geometry('350x190')
+janela.geometry('370x184')
 janela.title('Hall')
-#main_frame()
-screen_1()
+main_frame()
 janela.mainloop()
