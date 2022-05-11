@@ -1,13 +1,10 @@
-from tkinter import Frame, Tk, font, ttk, Text
-from webbrowser import BackgroundBrowser
+from tkinter import Button, Frame, Tk, font, ttk, Text
 from ttkbootstrap import Style
 import lib.fases as fases
 import lib.Mathe
 
 
-connected = bool()
 con = 'Conectar'
-
 def atualiza_display():
     global telemetry_channel
     list = fases.get_telemetry()
@@ -20,19 +17,12 @@ def atualiza_display():
     'horizontal_speed:',
     'surface_gravity:')
 
-    treeSelect = (telemetry_channel.identify('item', 0, 20),
-    telemetry_channel.identify('item', 0, 25),
-    telemetry_channel.identify('item', 0, 45),
-    telemetry_channel.identify('item', 0, 65),
-    telemetry_channel.identify('item', 0, 85))
-    for c in treeSelect:
-        if c != '':
-            telemetry_channel.delete(c)
+    telemetry_channel.delete(*telemetry_channel.get_children())
           
     cont = 0
     for c in list:        
         telemetry_channel.insert("",
-            "end", values=(names[cont], c)
+            "end", values=(names[cont], f'{c:>15.2f}')
         )
         print(names[cont], c)
         cont +=1
@@ -42,46 +32,39 @@ def atualiza_display():
 def orbit(but,  display, apo, frame):
     screen_1(frame)
     fases.get_parametro(atualiza_display)
-    but.configure(state='disabled')
+    but2.configure(state='disabled')
     lib.Mathe.Contador(10)
     fases.Lauch(1000, True)
-    fases.Orbitador(apo)
-    fases.Disconect()    
-    print('Tudo ok')
+    fases.Orbitador(apo)   
+    but2.configure(state='normal')
 
 
-def land(but,  display, frame):
-    screen_1(frame)
+def land(frame):
     fases.get_parametro(atualiza_display)
-    but.configure(state='normal')
+    but1.configure(state='disabled')
     fases.Lauch(7000, True)
     fases.verticalLanding()
-    fases.Disconect()
-    print('ok')
+    but1.configure(state='normal')
 
 
 def launch(but,  display, val, frame):
     screen_1(frame)
     fases.get_parametro(atualiza_display)
+    but3.configure(state='disabled')
     fases.Lauch(val, True)
-    fases.Disconect()
+    but3.configure(state='normal')
 
 
-def to_connect (but, display, frame):
-    global connected
+def to_connect (frame):
     global con
-    if connected == False:
-       
+    if fases.con_state() == False:
         fases.IntConect()
         con = 'Deconectar'
-        connected = True
         screen_1(frame)
     else:
         fases.Disconect()
         con = 'Conectar'
-        connected = False
-
-    but['text'] = con
+        screen_1(frame)
     
 
 def main_frame(frame_atual=None):
@@ -98,7 +81,7 @@ def main_frame(frame_atual=None):
     display.grid(row=0, column=1, padx=10, pady=10)
 
     painel_frame = ttk.Frame(frame)
-    b1 = ttk.Button(painel_frame, text='Conectar', width=15, command= lambda: to_connect(b1, display, frame))
+    b1 = ttk.Button(painel_frame, text='Conectar', width=15, command= lambda: to_connect(frame))
     b1.grid(row=0, column=0, padx=10, pady=10)
 
     painel_frame.grid(row=0, column=0)
@@ -107,7 +90,12 @@ def main_frame(frame_atual=None):
 
 
 def screen_1(frame_atual=None):
+    global con
     global telemetry_channel
+    global but1
+    global but2
+    global but3
+    global but4
     if frame_atual != None:
         frame_atual.destroy()   
     
@@ -124,10 +112,12 @@ def screen_1(frame_atual=None):
     painel_frame = ttk.Frame(frame)
     b1 = ttk.Button(painel_frame, text='Lançar', width=15, command=lambda: screen_3(frame))
     b2 = ttk.Button(painel_frame, text='Orbitar', width=15, command=lambda: screen_2(frame))
-    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(b3,  display, frame))
-    b1.grid(row=0, column=0, padx=10, pady=10)
-    b2.grid(row=1, column=0, padx=10, pady=10)
-    b3.grid(row=2, column=0, padx=10, pady=10)
+    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(frame))
+    b4 = ttk.Button(painel_frame, text=con, width=15, command=lambda: to_connect (frame))
+    b1.grid(row=0, column=0, padx=10, pady=5)
+    b2.grid(row=1, column=0, padx=10, pady=5)
+    b3.grid(row=2, column=0, padx=10, pady=5)
+    b4.grid(row=3, column=0, padx=10, pady=5)
     
     painel_frame.grid(row=0, column=0)
     display_frame.grid(row=0, column=1)
@@ -158,7 +148,7 @@ def screen_2(frame_atual=None):
     display.grid(row=1, column=0, padx=10, pady=10)
 
     painel_frame = ttk.Frame(frame)
-    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: orbit(b1,  display, spbox.get(), frame))
+    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: orbit(b1,  display, int(spbox.get()), frame))
     b2 = ttk.Button(painel_frame, text='volta', width=15, command=lambda: screen_1(frame))
     b1.grid(row=0, column=0, padx=10, pady=10)
     b2.grid(row=1, column=0, padx=10, pady=10)
@@ -191,7 +181,7 @@ def screen_3(frame_atual=None):
     display.grid(row=1, column=0, padx=10, pady=10)
 
     painel_frame = ttk.Frame(frame)
-    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: launch(b1,  display, spbox.get(), frame))
+    b1 = ttk.Button(painel_frame, text='tudo pronto', width=15, command=lambda: launch(b1,  display, int(spbox.get()), frame))
     b2 = ttk.Button(painel_frame, text='volta', width=15, command=lambda: screen_1(frame))
     b1.grid(row=0, column=0, padx=10, pady=10)
     b2.grid(row=1, column=0, padx=10, pady=10)
@@ -206,4 +196,5 @@ janela = style.master
 janela.geometry('370x184')
 janela.title('Hall')
 main_frame()
+#screen_1()
 janela.mainloop()

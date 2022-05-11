@@ -24,19 +24,35 @@ def IntConect():
             conn = krpc.connect()   
         except:
             print(f'\033[31m{"-" * 8}Erro ao executar a conexão{"-" * 8}\033[m')
-            if i > 9 :
+            if i >= 1:
                 break
             else:
                 continue
+            
         else:       
             __telemetry()
             print(f'\033[32m{"-" * 8}Conexão feita com sucesso{"-" * 8}\033[m')
             break
 
 
+def con_state():
+    global conn
+    global Speed
+    state = bool()
+    try:
+        conn.krpc.get_status().version
+    except:
+        state = False
+    else:
+        state = True
+    
+    return state
+
+
 def Disconect():
     global conn
     conn.close()
+    print(f'\033[32m{"-" * 8}Conexão encerrada{"-" * 8}\033[m')
 
 
 def Lauch(alt=0, sas=False):
@@ -99,7 +115,7 @@ def Orbitador(alt=70000):
                 print(Speed())
             else:
                 vessel.control.throttle = 0
-                sleep(1)
+                sleep(0.1)
         else:
             vessel.control.throttle = 0
             vessel.auto_pilot.disengage()
