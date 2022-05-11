@@ -2,7 +2,7 @@ from tkinter import Button, Frame, Tk, font, ttk, Text
 from ttkbootstrap import Style
 import lib.fases as fases
 import lib.Mathe
-import cx_Freeze
+
 
 
 con = 'Conectar'
