@@ -3,8 +3,6 @@ from ttkbootstrap import Style
 import lib.fases as fases
 import lib.Mathe
 
-
-
 con = 'Conectar'
 def atualiza_display():
     global telemetry_channel
@@ -42,10 +40,10 @@ def orbit(but,  display, apo, frame):
 
 def land(frame):
     fases.get_parametro(atualiza_display)
-    but1.configure(state='disabled')
+    but3.configure(state='disabled')
     fases.Lauch(7000, True)
     fases.verticalLanding()
-    but1.configure(state='normal')
+    but3.configure(state='normal')
 
 
 def launch(but,  display, val, frame):
@@ -60,7 +58,11 @@ def to_connect (frame):
     global con
     if fases.con_state() == False:
         fases.IntConect()
-        con = 'Deconectar'
+        if fases.con_state() == True:
+            con = 'Deconectar'
+        else:
+            con = 'Conectar'
+            
         screen_1(frame)
     else:
         fases.Disconect()
@@ -111,14 +113,14 @@ def screen_1(frame_atual=None):
     display.grid(row=0, column=0, padx=10, pady=10)
 
     painel_frame = ttk.Frame(frame)
-    b1 = ttk.Button(painel_frame, text='Lançar', width=15, command=lambda: screen_3(frame))
-    b2 = ttk.Button(painel_frame, text='Orbitar', width=15, command=lambda: screen_2(frame))
-    b3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(frame))
-    b4 = ttk.Button(painel_frame, text=con, width=15, command=lambda: to_connect (frame))
-    b1.grid(row=0, column=0, padx=10, pady=5)
-    b2.grid(row=1, column=0, padx=10, pady=5)
-    b3.grid(row=2, column=0, padx=10, pady=5)
-    b4.grid(row=3, column=0, padx=10, pady=5)
+    but1 = ttk.Button(painel_frame, text='Lançar', width=15, command=lambda: screen_3(frame))
+    but2 = ttk.Button(painel_frame, text='Orbitar', width=15, command=lambda: screen_2(frame))
+    but3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(frame))
+    but4 = ttk.Button(painel_frame, text=con, width=15, command=lambda: to_connect (frame))
+    but1.grid(row=0, column=0, padx=10, pady=5)
+    but2.grid(row=1, column=0, padx=10, pady=5)
+    but3.grid(row=2, column=0, padx=10, pady=5)
+    but4.grid(row=3, column=0, padx=10, pady=5)
     
     painel_frame.grid(row=0, column=0)
     display_frame.grid(row=0, column=1)

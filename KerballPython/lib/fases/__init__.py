@@ -24,6 +24,7 @@ def IntConect():
             conn = krpc.connect()   
         except:
             print(f'\033[31m{"-" * 8}Erro ao executar a conexão{"-" * 8}\033[m')
+            conn = krpc.connect()   
             if i >= 1:
                 break
             else:
