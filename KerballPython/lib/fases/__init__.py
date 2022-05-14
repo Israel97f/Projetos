@@ -73,7 +73,7 @@ def Lauch(alt=0, sas=False):
 
         
 
-def Orbitador(alt=70000):
+def Orbitador(alt=70000, type='Equatorial', dir=90):
     global vessel
     global altitude   
     global apoastro 
@@ -85,13 +85,25 @@ def Orbitador(alt=70000):
     vessel.control.throttle = 1
     first_stage = 0
 
+    if dir == 90:
+        if type == "Equatorial":  # linha opicional
+            dir = 90
+        elif type == "Polar":
+            dir = 0
+        elif type == "Rev_Equarorial":
+            dir = 270
+        elif type == "Rev_Polar":
+            dir = 180
+        else:
+            dir = 90
+
     while True:
         __fuel_chek()       
-        frac = altitude()/45000
-        if frac > 1:
+        frac = (- ((altitude() /45000)** 2) + (2 * altitude() /45000))
+        if frac > 1 or frac < 0 :
             frac = 1
-
-        vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * frac), 90)
+        
+        vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * frac), dir)
         
         if apoastro() > (alt * 0.9):
             vessel.control.throttle = vessel.mass * 9.6 * 1.4 /( vessel.max_thrust)
@@ -144,7 +156,7 @@ def verticalLanding():
             except:
                 d = 1000
             
-            if surface_altitude() <= d and d < 12000:                
+            if surface_altitude() <= d and d < 6000:                
                 vessel.control.throttle = 1
                 break
         sleep(0.1)
