@@ -144,6 +144,8 @@ def verticalLanding():
     global surface_altitude
     global surface_gravity
 
+    vessel.control.throttle = 1
+    sleep(1)
     vessel.auto_pilot.sas = True    
     vessel.control.throttle = 0
     

@@ -51,14 +51,13 @@ def orbit(apo, type_orbt, dir, frame):
     but2.configure(state='disabled')
     lib.Mathe.Contador(10)
     fases.Lauch(1000, True)
-    fases.Orbitador(apo, types[1][index], dir.get())   
+    fases.Orbitador(apo, types[1][index], dir)   
     but2.configure(state='normal')
 
 
 def land():
     fases.get_parametro(atualiza_display)
     but3.configure(state='disabled')
-    fases.Lauch(7000, True)
     fases.verticalLanding()
     but3.configure(state='normal')
 

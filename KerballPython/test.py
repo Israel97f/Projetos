@@ -1,6 +1,8 @@
-tuple_ = ((1, 3, 4, 8, 6 , 9), (2, 3, 8, 8, 9 , 4))
+altitude = float()
 
-for c in range(0, len(tuple_)):
-    for i in range(0, len(tuple_[0])):
-        print(f'{tuple_[c][i]})' , end=' ')
-    print(f'{""}', end=' ')
+for i in range(6000, 9000):
+    altitude = i
+    frac = (- ((altitude /45000)** 2) + (2 * altitude /45000))
+    print(f'{90 -(90*frac):.2f}', end="|")
+    if i % 19 == 0 and i != 0:
+        print(" ")
