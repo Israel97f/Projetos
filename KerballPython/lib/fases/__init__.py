@@ -63,10 +63,13 @@ def Lauch(alt=0, sas=False):
 
     vessel.control.throttle = 1
     vessel.control.activate_next_stage()
-    vessel.auto_pilot.sas = sas
+    vessel.auto_pilot.sas = False
+    vessel.auto_pilot.engage()
+    vessel.auto_pilot.target_pitch_and_heading(90, 90)
     while True:
         if apoastro() >= alt:
             vessel.control.throttle = 0
+            vessel.auto_pilot.disengage()
             break
 
         __fuel_chek()
