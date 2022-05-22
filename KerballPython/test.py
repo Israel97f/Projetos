@@ -1,9 +1,9 @@
 import lib.fases as fases
 import math
+from time import sleep
 
-#fases.IntConect()
-#fases.test(1200000)
-#fases.Disconect()
+fases.IntConect()
+fases.test()
+sleep(60)
+fases.Disconect()
 
-tg = math.atan(8/-2)
-print(math.degrees(tg))

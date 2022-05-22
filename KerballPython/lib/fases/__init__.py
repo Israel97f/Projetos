@@ -1,4 +1,4 @@
-from math import sqrt
+import math 
 import krpc
 from time import sleep
 
@@ -87,11 +87,13 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
     global surface_gravity
     global time_to_apoapsis
     global gravitational_parameter
-    global equatorial_radius 
+    global equatorial_radius
+    global mass
+    global max_thrust 
 
     vessel.auto_pilot.sas = False
     vessel.auto_pilot.engage()
-    vessel.control.throttle = vessel.mass * surface_gravity * 1.5 /( vessel.max_thrust)
+    vessel.control.throttle = mass() * surface_gravity * 1.5 /(max_thrust())
     first_stage = 0
 
     if dir == 90:
@@ -108,8 +110,8 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
 
     while True:
         __fuel_chek()   
-        speed_orbit = sqrt(gravitational_parameter/(equatorial_radius + alt))
-        time_burn = (speed_orbit -Speed_orbit()) / (vessel.max_thrust / vessel.mass) 
+        speed_orbit = math.sqrt(gravitational_parameter/(equatorial_radius + alt))
+        time_burn = (speed_orbit - Speed_orbit()) / (max_thrust() / mass()) 
 
         frac = (- ((altitude() /45000)** 2) + (2 * altitude() /45000))
         if frac > 1 or frac < 0 or altitude() > 45000:
@@ -118,7 +120,7 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
         vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * frac), dir)
         
         if alt > apoastro() > (alt * 0.9):
-            vessel.control.throttle = vessel.mass * surface_gravity * 1.4 /( vessel.max_thrust)
+            vessel.control.throttle = mass() * surface_gravity * 1.4 /( max_thrust())
 
         if apoastro() > alt:
             vessel.control.throttle = 0
@@ -132,9 +134,7 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
             vessel.control.throttle = 1
 
         if (time_burn / 2) <= time_to_apoapsis() and (alt - altitude()) < 4000:
-            vessel.auto_pilot.disengage()
-            vessel.auto_pilot.sas = True
-            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.prograde
+            vessel.auto_pilot.target_pitch_and_heading( 0, dir)
             vessel.control.throttle = 1
             break
         atualiza_display()
@@ -153,6 +153,7 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
             
         if abs(periastro() - apoastro()) < 2000 or alt * 1.3 < apoastro():
             vessel.control.throttle = 0
+            vessel.auto_pilot.disengage()
             break
 
         atualiza_display()
@@ -164,6 +165,9 @@ def verticalLanding():
     global vertical_speed 
     global surface_altitude
     global surface_gravity
+    global mass
+    global max_thrust
+
 
     vessel.control.throttle = 1
     sleep(1)
@@ -175,29 +179,37 @@ def verticalLanding():
         if vertical_speed() < 0:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde            
             try:
-                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - surface_gravity))) + 100
+                d1 = ((Speed() ** 2 - 625)/ (2*(max_thrust() / mass() - surface_gravity)))
+                d2 = ((25 ** 2 - 25) / (2* (0.5) * surface_gravity))
             except:
-                d = 1000
+                d1 = 1000
+                d2 = 500
             
-            if surface_altitude() <= d and d < 6000:                
+            if surface_altitude() <= d1 + d2 and d1 < 6000:                
                 vessel.control.throttle = 1
+
+
+            if Speed() <= 25:
                 break
+
         sleep(0.1)
         atualiza_display()
 
 
     while True:
         try:
-            delta = ((3 ** 2 - 50 ** 2) / ((-2) * (((vessel.max_thrust / vessel.mass ) * 0.8) - (surface_gravity))))
+            d2 = ((25 ** 2 - 25) / (2 * 0.5 * surface_gravity))
         except:
-            delta = 250
+            d2 = 150
     
-        if surface_altitude() < (delta + 50):
+        if surface_altitude() < d2 or Speed() < 25:
+            vessel.control.throttle = 1.5 * surface_gravity * mass() / max_thrust()
+            
+
+        if Speed() < 5:
             pouso()
             break
-        
-        if Speed() <= 50.00 and vertical_speed() < 0:
-            vessel.control.throttle = 0.99 * surface_gravity * vessel.mass / vessel.max_thrust
+
         atualiza_display()
 
 
@@ -212,7 +224,13 @@ def pouso():
     global vertical_speed 
     global horizontal_speed 
     global surface_gravity
+    global retrograde_
+    global mass
+    global max_thrust
+    global dir_vessel
+    global dir_retrograde
 
+    dire = tuple()
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90) 
     vessel.control.gear = True
@@ -220,21 +238,25 @@ def pouso():
     
     while True:
 
-        if horizontal_speed() > 10 or (math.atan(vertical_speed() / horizontal_speed()) * 180 / 3.14) > 75:
+        if horizontal_speed() > 8:
             vessel.auto_pilot.disengage()
             vessel.auto_pilot.sas = True
-            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
+            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+            
+        elif horizontal_speed() > 1 and False:
+            vessel.auto_pilot.target_pitch_and_heading(85, alg_retro)  
+            
         else:
             vessel.auto_pilot.sas = False
             vessel.auto_pilot.engage()
             vessel.auto_pilot.target_pitch_and_heading(90, 90) 
         
         if vertical_speed() < -5.0:
-            vessel.control.throttle = 1.5 * surface_gravity * vessel.mass / vessel.max_thrust #0.8
+            vessel.control.throttle = 1.2 * surface_gravity * mass() / max_thrust()
         elif vertical_speed() > 0:
-            vessel.control.throttle = 0.93 * surface_gravity * vessel.mass / vessel.max_thrust
+            vessel.control.throttle = 0.9 * surface_gravity * mass() / max_thrust()
         else:
-            vessel.control.throttle = surface_gravity * vessel.mass / vessel.max_thrust
+            vessel.control.throttle = surface_gravity * mass() / (max_thrust())
             if vessel.situation == vessel.situation.landed or vessel.situation == vessel.situation.splashed:
                 vessel.control.throttle = 0
                 vessel.auto_pilot.disengage()
@@ -273,10 +295,17 @@ def __telemetry():
     global time_to_apoapsis
     global gravitational_parameter
     global equatorial_radius
+    global retrograde_
+    global b
+    global mass
+    global max_thrust
+    global dir_retrograde
+    global dir_vessel
 
     vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
     veloref_orbit = vessel.orbit.body.orbital_reference_frame
+    ref_Surfece = vessel.surface_reference_frame
     surface_gravity = vessel.orbit.body.surface_gravity
     gravitational_parameter = vessel.orbit.body.gravitational_parameter
     equatorial_radius = vessel.orbit.body.equatorial_radius
@@ -290,6 +319,10 @@ def __telemetry():
     Speed_orbit = __addStream(vessel.flight(veloref_orbit), 'speed')
     vertical_speed = __addStream(vessel.flight(veloref), 'vertical_speed')
     horizontal_speed = __addStream(vessel.flight(veloref), 'horizontal_speed')
+    mass = __addStream(vessel, 'mass')
+    max_thrust = __addStream(vessel, 'max_thrust') 
+    dir_retrograde = __addStream(vessel.flight(ref_Surfece), 'retrograde')
+    dir_vessel = __addStream(vessel.flight(ref_Surfece), 'direction')
     
 
 
@@ -313,17 +346,10 @@ def get_telemetry():
     surface_gravity]
 
 
-def test(altt):
-    global time_to_apoapsis
-    global gravitational_parameter
-    global equatorial_radius 
+def test(altt=0):
     global vessel
-    global apoastro
-
-    global Speed 
-
-    speed_orb = sqrt(gravitational_parameter/(equatorial_radius + altt))
-    time_burn = (speed_orb - Speed_orbit())/ (vessel.max_thrust / vessel.mass)
-    print(f'{Speed_orbit():.2f} m/s')
-    print(f'{speed_orb:.2f} m/s')
-    print(f'{time_burn/ 2 :.2f} s')
+    veloref_orbit = vessel.auto_pilot.reference_frame
+    vessel.auto_pilot.engage()
+    v = vessel.flight(veloref_orbit).retrograde
+    vessel.auto_pilot.target_direction = (math.tan(3 * 3.14 / 8) * (v[1] ** 2 + v[2] ** 2)**(1/2), v[1], v[2])
+    print('asdf')
