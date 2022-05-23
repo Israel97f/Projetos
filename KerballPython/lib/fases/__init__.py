@@ -238,13 +238,15 @@ def pouso():
     
     while True:
 
-        if horizontal_speed() > 8:
+        if horizontal_speed() > 3000:
             vessel.auto_pilot.disengage()
             vessel.auto_pilot.sas = True
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             
-        elif horizontal_speed() > 1 and False:
-            vessel.auto_pilot.target_pitch_and_heading(85, alg_retro)  
+        elif horizontal_speed() > 1:
+            v = dir_retrograde()
+            o = (60) * 3.1415/180
+            vessel.auto_pilot.target_direction = (math.sin(o) , v[1] / math.cos(o), v[2] /math.cos(o))
             
         else:
             vessel.auto_pilot.sas = False
@@ -305,6 +307,7 @@ def __telemetry():
     vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
     veloref_orbit = vessel.orbit.body.orbital_reference_frame
+    tagetreft = vessel.auto_pilot.reference_frame
     ref_Surfece = vessel.surface_reference_frame
     surface_gravity = vessel.orbit.body.surface_gravity
     gravitational_parameter = vessel.orbit.body.gravitational_parameter
@@ -321,7 +324,7 @@ def __telemetry():
     horizontal_speed = __addStream(vessel.flight(veloref), 'horizontal_speed')
     mass = __addStream(vessel, 'mass')
     max_thrust = __addStream(vessel, 'max_thrust') 
-    dir_retrograde = __addStream(vessel.flight(ref_Surfece), 'retrograde')
+    dir_retrograde = __addStream(vessel.flight(tagetreft), 'retrograde')
     dir_vessel = __addStream(vessel.flight(ref_Surfece), 'direction')
     
 
@@ -348,8 +351,8 @@ def get_telemetry():
 
 def test(altt=0):
     global vessel
-    veloref_orbit = vessel.auto_pilot.reference_frame
+    
     vessel.auto_pilot.engage()
-    v = vessel.flight(veloref_orbit).retrograde
+    v = dir_retrograde()
     vessel.auto_pilot.target_direction = (math.tan(3 * 3.14 / 8) * (v[1] ** 2 + v[2] ** 2)**(1/2), v[1], v[2])
     print('asdf')

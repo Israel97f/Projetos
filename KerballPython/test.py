@@ -3,7 +3,10 @@ import math
 from time import sleep
 
 fases.IntConect()
-fases.test()
-sleep(60)
+fases.pouso()
 fases.Disconect()
 
+
+o = math.sin(60 * 3.1415 /180 )
+
+print(o)
