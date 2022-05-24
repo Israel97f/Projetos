@@ -237,42 +237,44 @@ def pouso():
     sleep(0.1) 
     
     while True:
+        engine_angle = int()
 
-        if horizontal_speed() > 3000:
+        if horizontal_speed() > 20:
             vessel.auto_pilot.disengage()
             vessel.auto_pilot.sas = True
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+            engine_angle = 0
             
         elif horizontal_speed() > 1:
-            #v = pos_retrograde()
-            #o = math.radians(70)
-            #try:
-            #    kn = abs(math.cos(o) / ((v[1] ** 2 + v[2] ** 2) ** (1/2)))
-            #except ZeroDivisionError:
-            #    kn = 0
-            #    print('except')
-            
-            o = - pos_retrograde()
-
-            if o < 0:
-                o *= -1
-                o = 360 - o
-
-            vessel.auto_pilot.target_pitch_and_heading(85, o ) #(math.sin(o) , v[1] * kn, v[2] * kn)
-            print(f'----------------------- {o}')
-            #vessel.auto_pilot.wait()
+            caminho = 0
+            vessel.auto_pilot.sas = False
+            vessel.auto_pilot.engage()
+            #vessel.auto_pilot.target_pitch_and_heading(90, 90) 
+            #engine_angle = 
+        
+            if caminho == 0 :
+                vessel.auto_pilot.target_pitch_and_heading(85, pos_retrograde() ) 
+                #vessel.auto_pilot.wait()
+                caminho = 1
+                engine_angle = 5
+            else:
+                vessel.auto_pilot.target_pitch_and_heading(90, 90 ) 
+                #vessel.auto_pilot.wait()
+                caminho = 0
+                engine_angle = 0
             
         else:
             vessel.auto_pilot.sas = False
             vessel.auto_pilot.engage()
             vessel.auto_pilot.target_pitch_and_heading(90, 90) 
+            engine_angle = 0
         
         if vertical_speed() < -5.0:
             vessel.control.throttle = 1.2 * surface_gravity * mass() / max_thrust()
         elif vertical_speed() > 0:
             vessel.control.throttle = 0.9 * surface_gravity * mass() / max_thrust()
         else:
-            vessel.control.throttle = surface_gravity * mass() / (max_thrust())
+            vessel.control.throttle = surface_gravity * mass() / (max_thrust())# * math.cos(engine_angle * math.pi / 180))
             if vessel.situation == vessel.situation.landed or vessel.situation == vessel.situation.splashed:
                 vessel.control.throttle = 0
                 vessel.auto_pilot.disengage()
@@ -372,11 +374,8 @@ def get_telemetry():
 
 def pos_retrograde():
     global veloref
-    global tagetreft
     global ref_Surfece
-    global veloref_orbit
     global SufVelReferance_frame
-    global pos_vessel
 
     u = conn.space_center.transform_position(dir_retrograde(), SufVelReferance_frame, veloref)
     u = conn.space_center.transform_position(u, veloref, ref_Surfece)
@@ -384,10 +383,15 @@ def pos_retrograde():
     v = vessel.position(ref_Surfece)
 
     dir_h = (v[2] - u[2], v[1] - u[1], -v[0] + u[0])
-    angulo = math.degrees(math.atan2(dir_h[1], dir_h[0]))
+    angle = - math.degrees(math.atan2(dir_h[1], dir_h[0]))
 
-    print(f'{dir_h} {angulo}')
-    return angulo
+    if angle < 0:
+        angle *= -1
+        angle = 360 -angle
+
+    print(f'================ {angle}')
+
+    return angle
 
 
 def test(altt=0):
