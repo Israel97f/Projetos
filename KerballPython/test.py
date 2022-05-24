@@ -1,12 +1,21 @@
 import lib.fases as fases
 import math
 from time import sleep
+from random import randint
 
 fases.IntConect()
-fases.pouso()
+fases.pouso()#
+
+#fases.test(-67.6)
 fases.Disconect()
+def tup ():
+	v = (randint(0, 50), randint(0, 50), randint(0, 50))
+	return v
 
 
-o = math.sin(60 * 3.1415 /180 )
-
-print(o)
+cont = 0
+while True:
+	cont += 1
+	v = tup()
+	print(v)
+	if cont > 50: break

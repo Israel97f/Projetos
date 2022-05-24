@@ -244,9 +244,23 @@ def pouso():
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             
         elif horizontal_speed() > 1:
-            v = dir_retrograde()
-            o = (60) * 3.1415/180
-            vessel.auto_pilot.target_direction = (math.sin(o) , v[1] / math.cos(o), v[2] /math.cos(o))
+            #v = pos_retrograde()
+            #o = math.radians(70)
+            #try:
+            #    kn = abs(math.cos(o) / ((v[1] ** 2 + v[2] ** 2) ** (1/2)))
+            #except ZeroDivisionError:
+            #    kn = 0
+            #    print('except')
+            
+            o = - pos_retrograde()
+
+            if o < 0:
+                o *= -1
+                o = 360 - o
+
+            vessel.auto_pilot.target_pitch_and_heading(85, o ) #(math.sin(o) , v[1] * kn, v[2] * kn)
+            print(f'----------------------- {o}')
+            #vessel.auto_pilot.wait()
             
         else:
             vessel.auto_pilot.sas = False
@@ -264,6 +278,7 @@ def pouso():
                 vessel.auto_pilot.disengage()
                 vessel.auto_pilot.sas = True
                 break 
+        print(get_telemetry())
         atualiza_display()
 
 
@@ -298,16 +313,21 @@ def __telemetry():
     global gravitational_parameter
     global equatorial_radius
     global retrograde_
-    global b
     global mass
     global max_thrust
     global dir_retrograde
     global dir_vessel
+    global ref_Surfece
+    global veloref_orbit
+    global tagetreft
+    global SufVelReferance_frame
+    global veloref
 
     vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
     veloref_orbit = vessel.orbit.body.orbital_reference_frame
     tagetreft = vessel.auto_pilot.reference_frame
+    SufVelReferance_frame = vessel.surface_velocity_reference_frame
     ref_Surfece = vessel.surface_reference_frame
     surface_gravity = vessel.orbit.body.surface_gravity
     gravitational_parameter = vessel.orbit.body.gravitational_parameter
@@ -324,9 +344,10 @@ def __telemetry():
     horizontal_speed = __addStream(vessel.flight(veloref), 'horizontal_speed')
     mass = __addStream(vessel, 'mass')
     max_thrust = __addStream(vessel, 'max_thrust') 
-    dir_retrograde = __addStream(vessel.flight(tagetreft), 'retrograde')
-    dir_vessel = __addStream(vessel.flight(ref_Surfece), 'direction')
-    
+
+
+    dir_retrograde = __addStream(vessel.flight(veloref), 'retrograde')
+    #pos_vessel = __addStream(vessel, 'position')
 
 
 def get_telemetry():
@@ -349,10 +370,32 @@ def get_telemetry():
     surface_gravity]
 
 
+def pos_retrograde():
+    global veloref
+    global tagetreft
+    global ref_Surfece
+    global veloref_orbit
+    global SufVelReferance_frame
+    global pos_vessel
+
+    u = conn.space_center.transform_position(dir_retrograde(), SufVelReferance_frame, veloref)
+    u = conn.space_center.transform_position(u, veloref, ref_Surfece)
+
+    v = vessel.position(ref_Surfece)
+
+    dir_h = (v[2] - u[2], v[1] - u[1], -v[0] + u[0])
+    angulo = math.degrees(math.atan2(dir_h[1], dir_h[0]))
+
+    print(f'{dir_h} {angulo}')
+    return angulo
+
+
 def test(altt=0):
     global vessel
     
     vessel.auto_pilot.engage()
     v = dir_retrograde()
-    vessel.auto_pilot.target_direction = (math.tan(3 * 3.14 / 8) * (v[1] ** 2 + v[2] ** 2)**(1/2), v[1], v[2])
-    print('asdf')
+    o = math.radians(altt)
+    kn = abs(math.cos(o) / (v[1] + v[2]))
+    vessel.auto_pilot.target_direction = (math.sin(o) , v[1] * kn, v[2] * kn)
+    vessel.auto_pilot.wait()
