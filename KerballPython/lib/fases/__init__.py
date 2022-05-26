@@ -180,10 +180,11 @@ def verticalLanding():
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde            
             try:
                 d1 = ((Speed() ** 2 - 625)/ (2*(max_thrust() / mass() - surface_gravity)))
-                d2 = ((25 ** 2 - 25) / (2* (0.5) * surface_gravity))
+                d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
             except:
                 d1 = 1000
                 d2 = 500
+                print(f'=============//============//================//===================//==============')
             
             if surface_altitude() <= d1 + d2 and d1 < 6000:                
                 vessel.control.throttle = 1
@@ -198,12 +199,12 @@ def verticalLanding():
 
     while True:
         try:
-            d2 = ((25 ** 2 - 25) / (2 * 0.5 * surface_gravity))
+            d2 = (25 ** 2 - 25) / (2 * 4.9)
         except:
             d2 = 150
     
         if surface_altitude() < d2 or Speed() < 25:
-            vessel.control.throttle = 1.5 * surface_gravity * mass() / max_thrust()
+            vessel.control.throttle = (4.9 / surface_gravity + 1) * surface_gravity * mass() / max_thrust()
             
 
         if Speed() < 5:
@@ -234,47 +235,44 @@ def pouso():
     vessel.auto_pilot.engage()
     vessel.auto_pilot.target_pitch_and_heading(90, 90) 
     vessel.control.gear = True
+    caminho = 0
     sleep(0.1) 
     
     while True:
-        engine_angle = int()
 
         if horizontal_speed() > 20:
             vessel.auto_pilot.disengage()
+            #vessel.control.reaction_wheels = True
             vessel.auto_pilot.sas = True
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             engine_angle = 0
             
         elif horizontal_speed() > 1:
-            caminho = 0
+            
             vessel.auto_pilot.sas = False
+            vessel.control.rcs = True
+            #vessel.control.reaction_wheels = False
             vessel.auto_pilot.engage()
-            #vessel.auto_pilot.target_pitch_and_heading(90, 90) 
-            #engine_angle = 
         
             if caminho == 0 :
                 vessel.auto_pilot.target_pitch_and_heading(85, pos_retrograde() ) 
-                #vessel.auto_pilot.wait()
-                caminho = 1
-                engine_angle = 5
+                #caminho = 1
+
             else:
                 vessel.auto_pilot.target_pitch_and_heading(90, 90 ) 
-                #vessel.auto_pilot.wait()
                 caminho = 0
-                engine_angle = 0
             
         else:
             vessel.auto_pilot.sas = False
             vessel.auto_pilot.engage()
             vessel.auto_pilot.target_pitch_and_heading(90, 90) 
-            engine_angle = 0
         
         if vertical_speed() < -5.0:
             vessel.control.throttle = 1.2 * surface_gravity * mass() / max_thrust()
         elif vertical_speed() > 0:
             vessel.control.throttle = 0.9 * surface_gravity * mass() / max_thrust()
         else:
-            vessel.control.throttle = surface_gravity * mass() / (max_thrust())# * math.cos(engine_angle * math.pi / 180))
+            vessel.control.throttle = surface_gravity * mass() / (max_thrust())
             if vessel.situation == vessel.situation.landed or vessel.situation == vessel.situation.splashed:
                 vessel.control.throttle = 0
                 vessel.auto_pilot.disengage()
@@ -324,6 +322,7 @@ def __telemetry():
     global tagetreft
     global SufVelReferance_frame
     global veloref
+    global vet_velo
 
     vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
@@ -349,7 +348,7 @@ def __telemetry():
 
 
     dir_retrograde = __addStream(vessel.flight(veloref), 'retrograde')
-    #pos_vessel = __addStream(vessel, 'position')
+    vet_velo = __addStream(vessel.flight(veloref), 'velocity')
 
 
 def get_telemetry():
@@ -376,20 +375,28 @@ def pos_retrograde():
     global veloref
     global ref_Surfece
     global SufVelReferance_frame
+    global vet_velo
 
     u = conn.space_center.transform_position(dir_retrograde(), SufVelReferance_frame, veloref)
     u = conn.space_center.transform_position(u, veloref, ref_Surfece)
-
     v = vessel.position(ref_Surfece)
+    w = conn.space_center.transform_position(vet_velo(), veloref, ref_Surfece)
 
-    dir_h = (v[2] - u[2], v[1] - u[1], -v[0] + u[0])
-    angle = - math.degrees(math.atan2(dir_h[1], dir_h[0]))
+    #dir_h = (v[2] - u[2] - w[1], v[1] - u[1] - w[2], -v[0] + u[0] - w[0])
+    dir_h = (-w[1], -w[2])
+
+    angle = math.degrees(math.atan2(dir_h[1], dir_h[0]))
 
     if angle < 0:
+        print(angle)
+        print('                       //                     ')
         angle *= -1
-        angle = 360 -angle
+        angle = 360 - angle
+    else:
+        #angle += 180
+        pass
 
-    print(f'================ {angle}')
+    print(f'================ {angle} === {w} === {u} == {v}')
 
     return angle
 
@@ -397,9 +404,4 @@ def pos_retrograde():
 def test(altt=0):
     global vessel
     
-    vessel.auto_pilot.engage()
-    v = dir_retrograde()
-    o = math.radians(altt)
-    kn = abs(math.cos(o) / (v[1] + v[2]))
-    vessel.auto_pilot.target_direction = (math.sin(o) , v[1] * kn, v[2] * kn)
-    vessel.auto_pilot.wait()
+    vessel.control.rcs = False

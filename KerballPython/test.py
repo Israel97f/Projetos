@@ -3,11 +3,11 @@ import math
 from time import sleep
 from random import randint
 
-#fases.IntConect()
+fases.IntConect()
 #fases.pouso()#
 
-#fases.test(-67.6)
-#fases.Disconect()
+fases.test(-67.6)
+fases.Disconect()
 def tup ():
 	v = (randint(0, 50), randint(0, 50), randint(0, 50))
 	return v

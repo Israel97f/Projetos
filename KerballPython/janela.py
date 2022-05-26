@@ -23,7 +23,7 @@ def atualiza_display():
         telemetry_channel.insert("",
             "end", values=(names[cont], f'{c:>15.2f}')
         )
-        print(names[cont], c)
+        #print(names[cont], c)
         cont +=1
     janela.update()
 
