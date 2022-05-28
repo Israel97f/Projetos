@@ -177,9 +177,10 @@ def verticalLanding():
     while True:
         
         if vertical_speed() < 0:
-            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde            
+            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
+ 
             try:
-                d1 = ((Speed() ** 2 - 625)/ (2*(max_thrust() / mass() - surface_gravity)))
+                d1 = distance_burning(Speed() - 25) + 0.5 * Speed() #((Speed() ** 2 - 625)/ (2*(max_thrust() / mass() - surface_gravity)))
                 d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
             except:
                 d1 = 1000
@@ -242,7 +243,6 @@ def pouso():
 
         if horizontal_speed() > 20:
             vessel.auto_pilot.disengage()
-            #vessel.control.reaction_wheels = True
             vessel.auto_pilot.sas = True
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
             engine_angle = 0
@@ -251,16 +251,8 @@ def pouso():
             
             vessel.auto_pilot.sas = False
             vessel.control.rcs = True
-            #vessel.control.reaction_wheels = False
             vessel.auto_pilot.engage()
-        
-            if caminho == 0 :
-                vessel.auto_pilot.target_pitch_and_heading(85, pos_retrograde() ) 
-                #caminho = 1
-
-            else:
-                vessel.auto_pilot.target_pitch_and_heading(90, 90 ) 
-                caminho = 0
+            vessel.auto_pilot.target_pitch_and_heading(85, pos_retrograde() ) 
             
         else:
             vessel.auto_pilot.sas = False
@@ -272,13 +264,13 @@ def pouso():
         elif vertical_speed() > 0:
             vessel.control.throttle = 0.9 * surface_gravity * mass() / max_thrust()
         else:
-            vessel.control.throttle = surface_gravity * mass() / (max_thrust())
+            vessel.control.throttle = 0.99 * surface_gravity * mass() / (max_thrust())
             if vessel.situation == vessel.situation.landed or vessel.situation == vessel.situation.splashed:
                 vessel.control.throttle = 0
                 vessel.auto_pilot.disengage()
                 vessel.auto_pilot.sas = True
                 break 
-        print(get_telemetry())
+    
         atualiza_display()
 
 
@@ -323,6 +315,7 @@ def __telemetry():
     global SufVelReferance_frame
     global veloref
     global vet_velo
+    global specific_impulse
 
     vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
@@ -333,6 +326,7 @@ def __telemetry():
     surface_gravity = vessel.orbit.body.surface_gravity
     gravitational_parameter = vessel.orbit.body.gravitational_parameter
     equatorial_radius = vessel.orbit.body.equatorial_radius
+    specific_impulse = vessel.specific_impulse
 
     apoastro = __addStream(vessel.orbit, 'apoapsis_altitude')
     periastro = __addStream(vessel.orbit, 'periapsis_altitude')
@@ -374,34 +368,60 @@ def get_telemetry():
 def pos_retrograde():
     global veloref
     global ref_Surfece
-    global SufVelReferance_frame
     global vet_velo
+    global conn
 
-    u = conn.space_center.transform_position(dir_retrograde(), SufVelReferance_frame, veloref)
-    u = conn.space_center.transform_position(u, veloref, ref_Surfece)
-    v = vessel.position(ref_Surfece)
     w = conn.space_center.transform_position(vet_velo(), veloref, ref_Surfece)
 
-    #dir_h = (v[2] - u[2] - w[1], v[1] - u[1] - w[2], -v[0] + u[0] - w[0])
     dir_h = (-w[1], -w[2])
 
     angle = math.degrees(math.atan2(dir_h[1], dir_h[0]))
 
     if angle < 0:
-        print(angle)
-        print('                       //                     ')
         angle *= -1
         angle = 360 - angle
-    else:
-        #angle += 180
-        pass
-
-    print(f'================ {angle} === {w} === {u} == {v}')
 
     return angle
 
 
-def test(altt=0):
-    global vessel
+def distance_burning(dv=0.0):
+    global specific_impulse
+    global surface_gravity
+    global surface_altitude
+    global mass
+    global Speed
     
-    vessel.control.rcs = False
+
+    k = vessel.max_thrust / (vessel.specific_impulse * 5 * 9.8)
+
+    speed_variation = dv + abs(math.sqrt(2 * surface_gravity * surface_altitude()))
+    burning_time = (1 - 1 / math.e ** (speed_variation / (specific_impulse * 5 * 9.8 ) ) ) * mass() / k
+    acceleration = speed_variation / burning_time
+
+    distance = (Speed() ** 2 - 25) / (2 * acceleration) 
+
+    print(acceleration)
+    print(max_thrust()/mass())
+    print('========//===========//========')
+
+    return distance
+
+
+
+def test(altt=0):
+    global specific_impulse
+    global vessel
+    a = specific_impulse
+    b = vessel.parts.engines
+    k = 0
+    for c in b:
+        if c.active:
+            k += c.max_thrust / (5 * c.specific_impulse * 9.8)
+            print(f'{c.max_thrust} -- {c.specific_impulse}')
+
+    print(max_thrust())
+
+    print(k)
+    print(a)
+    print(b)
+    
