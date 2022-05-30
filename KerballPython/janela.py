@@ -52,7 +52,7 @@ def orbit(apo, type_orbt, dir, frame):
     lib.Mathe.Contador(10)
     fases.Lauch(1000, True)
     fases.Orbitador(apo, types[1][index], dir)   
-    fases.Disconect()
+    to_disconect()
     but2.configure(state='normal')
     screen_1(frame)
 
@@ -61,7 +61,7 @@ def land():
     fases.get_parametro(atualiza_display)
     but3.configure(state='disabled')
     fases.verticalLanding()
-    fases.Disconect()
+    to_disconect()
     but3.configure(state='normal')
 
 
@@ -70,7 +70,7 @@ def launch(val, frame):
     fases.get_parametro(atualiza_display)
     but3.configure(state='disabled')
     fases.Lauch(val, True)
-    fases.Disconect()
+    to_disconect()
     but3.configure(state='normal')
     screen_1(frame)
 
@@ -89,6 +89,11 @@ def to_connect (frame):
         fases.Disconect()
         con = 'Conectar'
         screen_1(frame)
+
+
+def to_disconect():
+    con = 'Conectar'
+    fases.Disconect()
     
 
 def main_frame(frame_atual=None):

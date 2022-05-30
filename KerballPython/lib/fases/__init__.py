@@ -180,7 +180,7 @@ def verticalLanding():
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
  
             try:
-                d1 = distance_burning(Speed() - 25) + 0.5 * Speed() #((Speed() ** 2 - 625)/ (2*(max_thrust() / mass() - surface_gravity)))
+                d1 = distance_burning(Speed() - 25) + 1.0 * Speed() #((Speed() ** 2 - 625)/ (2*(max_thrust() / mass() - surface_gravity)))
                 d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
             except:
                 d1 = 1000
@@ -190,6 +190,8 @@ def verticalLanding():
             if surface_altitude() <= d1 + d2 and d1 < 6000:                
                 vessel.control.throttle = 1
 
+            if surface_altitude() < 100:
+                vessel.control.gear = True
 
             if Speed() <= 25:
                 break
@@ -390,6 +392,8 @@ def distance_burning(dv=0.0):
     global surface_altitude
     global mass
     global Speed
+    global horizontal_speed
+    global vertical_speed
     
 
     k = vessel.max_thrust / (vessel.specific_impulse * 5 * 9.8)
@@ -398,11 +402,13 @@ def distance_burning(dv=0.0):
     burning_time = (1 - 1 / math.e ** (speed_variation / (specific_impulse * 5 * 9.8 ) ) ) * mass() / k
     acceleration = speed_variation / burning_time
 
-    distance = (Speed() ** 2 - 25) / (2 * acceleration) 
+    distance = (Speed() ** 2 - 25) / (2 * acceleration) * math.sin(math.atan(- vertical_speed() / horizontal_speed()))
 
-    print(acceleration)
     print(max_thrust()/mass())
+    print(acceleration)
+    print(distance)
     print('========//===========//========')
+
 
     return distance
 
@@ -420,6 +426,8 @@ def test(altt=0):
             print(f'{c.max_thrust} -- {c.specific_impulse}')
 
     print(max_thrust())
+
+    print(mass())
 
     print(k)
     print(a)
