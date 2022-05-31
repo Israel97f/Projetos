@@ -2,7 +2,8 @@ import math
 import krpc
 from time import sleep
 
-# experimemtal -------
+
+stage = int()
 param = None
 def get_parametro(parametro=None):
     global param
@@ -13,7 +14,6 @@ def atualiza_display():
     global param
     if param != None:
         param()
-#----------------------
 
 
 def IntConect():
@@ -180,7 +180,7 @@ def verticalLanding():
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
  
             try:
-                d1 = distance_burning(Speed() - 25) + 1.0 * Speed() #((Speed() ** 2 - 625)/ (2*(max_thrust() / mass() - surface_gravity)))
+                d1 = distance_burning(Speed() - 25) + 0.8 * Speed() 
                 d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
             except:
                 d1 = 1000
@@ -254,12 +254,15 @@ def pouso():
             vessel.auto_pilot.sas = False
             vessel.control.rcs = True
             vessel.auto_pilot.engage()
-            vessel.auto_pilot.target_pitch_and_heading(85, pos_retrograde() ) 
+            vessel.auto_pilot.deceletation_time = (0.5, 0.5, 0.5)
+            vessel.auto_pilot.attenuation_angle = (0.5, 0.5, 0.5)
+            #vessel.auto_pilot.target_pitch_and_heading(85, pos_retrograde() ) 
+            vessel.auto_pilot.target_direction = pos_retrograde()
             
         else:
             vessel.auto_pilot.sas = False
             vessel.auto_pilot.engage()
-            vessel.auto_pilot.target_pitch_and_heading(90, 90) 
+            vessel.auto_pilot.target_direction = (1, 0, 0)
         
         if vertical_speed() < -5.0:
             vessel.control.throttle = 1.2 * surface_gravity * mass() / max_thrust()
@@ -277,8 +280,7 @@ def pouso():
 
 
 def __fuel_chek():
-    global stage 
-    stage = int()   
+    global stage    
     while len(vessel.parts.in_stage(stage)) > 0: # calcula quantos estagios a nave tem
         stage += 1 
 
@@ -383,7 +385,11 @@ def pos_retrograde():
         angle *= -1
         angle = 360 - angle
 
-    return angle
+    angle = angle * math.pi / 180
+
+    kn = abs(math.sqrt(math.cos(85 * math.pi / 180) ** 2 / (math.sin(angle) ** 2 + math.cos(angle) ** 2)))
+
+    return (math.sin(85 * math.pi / 180), kn * math.cos(angle), kn * math.sin(angle))
 
 
 def distance_burning(dv=0.0):

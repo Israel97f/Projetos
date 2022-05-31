@@ -94,6 +94,8 @@ def to_connect (frame):
 def to_disconect():
     con = 'Conectar'
     fases.Disconect()
+    but3.configure(text=con)
+    janela.update()
     
 
 def main_frame(frame_atual=None):

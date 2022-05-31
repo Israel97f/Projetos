@@ -4,8 +4,8 @@ from time import sleep
 from random import randint
 
 fases.IntConect()
-#fases.pouso()#
+fases.pouso()#
 
-fases.test(-67.6)
+#fases.test(-67.6)
 #a = fases.distance_burning(250)
 fases.Disconect()
