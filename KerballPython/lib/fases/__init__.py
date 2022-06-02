@@ -256,7 +256,6 @@ def pouso():
             vessel.auto_pilot.engage()
             vessel.auto_pilot.deceletation_time = (0.5, 0.5, 0.5)
             vessel.auto_pilot.attenuation_angle = (0.5, 0.5, 0.5)
-            #vessel.auto_pilot.target_pitch_and_heading(85, pos_retrograde() ) 
             vessel.auto_pilot.target_direction = pos_retrograde()
             
         else:
@@ -400,9 +399,10 @@ def distance_burning(dv=0.0):
     global Speed
     global horizontal_speed
     global vertical_speed
+    global max_thrust
     
 
-    k = vessel.max_thrust / (vessel.specific_impulse * 5 * 9.8)
+    k = max_thrust() / (specific_impulse * 5 * 9.8)
 
     speed_variation = dv + abs(math.sqrt(2 * surface_gravity * surface_altitude()))
     burning_time = (1 - 1 / math.e ** (speed_variation / (specific_impulse * 5 * 9.8 ) ) ) * mass() / k
@@ -417,7 +417,6 @@ def distance_burning(dv=0.0):
 
 
     return distance
-
 
 
 def test(altt=0):

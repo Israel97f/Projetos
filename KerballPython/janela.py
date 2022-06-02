@@ -57,12 +57,13 @@ def orbit(apo, type_orbt, dir, frame):
     screen_1(frame)
 
 
-def land():
+def land(frame):
     fases.get_parametro(atualiza_display)
     but3.configure(state='disabled')
     fases.verticalLanding()
     to_disconect()
     but3.configure(state='normal')
+    screen_1(frame)
 
 
 def launch(val, frame):
@@ -143,7 +144,7 @@ def screen_1(frame_atual=None):
     painel_frame = ttk.Frame(frame)
     but1 = ttk.Button(painel_frame, text='Lançar', width=15, command=lambda: screen_3(frame))
     but2 = ttk.Button(painel_frame, text='Orbitar', width=15, command=lambda: screen_2(frame))
-    but3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land())
+    but3 = ttk.Button(painel_frame, text='Pousar', width=15, command= lambda: land(frame))
     but4 = ttk.Button(painel_frame, text=con, width=15, command=lambda: to_connect (frame))
     but1.grid(row=0, column=0, padx=10, pady=5)
     but2.grid(row=1, column=0, padx=10, pady=5)
