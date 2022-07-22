@@ -11,10 +11,9 @@ function screen1(root)
         width = 150,
         height = 180,
         flexdirection = "column",
-        justifycontent = "space evenly",
+        aligncontent = "flex end",
         border = 10,
     }
-    --panel:justifycontent( "space evenly")
     local display = gui.Container.create()
     display:setstyle{
         width = 230
