@@ -8,8 +8,13 @@ function screen1(root)
 
     local panel = gui.Container.create()
     panel:setstyle{
-        width = 150 
+        width = 150,
+        height = 180,
+        flexdirection = "column",
+        justifycontent = "space evenly",
+        border = 10,
     }
+    --panel:justifycontent( "space evenly")
     local display = gui.Container.create()
     display:setstyle{
         width = 230
@@ -62,7 +67,7 @@ local root = gui.Container.create()
 root:setstyle{
     padding = 10,
     flexdirection = "row",
-    height = 60
+    height = 60,
 }
 
 screen1(root)
