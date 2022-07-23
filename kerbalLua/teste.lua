@@ -1,7 +1,3 @@
-local Sun = {}
-
-function Sun:soma(x)
-    return x + 5
+for i = 0, 1000 do
+    print(i)
 end
-
-return Sun
