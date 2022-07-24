@@ -3,6 +3,13 @@ package.cpath = "libYue/yue.so"
 local gui = require "yue.gui"
 local test = require "teste"
 
+function des(display, mens)
+    local event = gui.Signal.connect(function ()
+        io.popen("firefox")
+    end)
+    --display:removechildview(mens)
+end
+
 function screen1(root)
 
     local panel = gui.Container.create()
@@ -88,7 +95,7 @@ function screen2(root)
     }
     mens:settext(tostring(test.data))
     display:addchildview(mens)
-    
+
     -- cria o 1° botão
     local button1 = gui.Button.create("vai")
     button1:setenabled(true)
@@ -99,6 +106,7 @@ function screen2(root)
     }
     button1.onclick = function ()  --teste23(display)
         io.popen("lua janela.lua")
+        des(display, mens)
     end
 
     -- cria o 2° botão

@@ -10,7 +10,7 @@ function test:__sleep(ms)
 end
 
 
-for i = 0, 10 do
+for i = 0, 3 do
     test:__sleep(1000)
     print(i)
     test.data = i
