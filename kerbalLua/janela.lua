@@ -1,13 +1,21 @@
 
 package.cpath = "libYue/yue.so"
 local gui = require "yue.gui"
-local test = require "teste"
+--local test = require "teste"
+local labelAtual = nil
 
-function des(display, mens)
-    local event = gui.Signal.connect(function ()
-        io.popen("firefox")
-    end)
-    --display:removechildview(mens)
+
+function writesOnDisplay(_data)
+    labelAtual:settext(_data)
+end
+
+function readfile()
+    local data = nil
+   
+        local file = io.open("tempfile.data", "r")
+        data = file:read("*a")
+        io.close(file)
+    return data
 end
 
 function screen1(root)
@@ -26,6 +34,15 @@ function screen1(root)
         backgroundcolor = "#000f0f"
 
     }
+    -- cria um label
+    local mens = gui.Label.create("1")
+    mens:setstyle{
+        flex = 1
+    }
+    labelAtual = mens
+    mens:settext("hi")
+    display:addchildview(mens)
+
     -- cria o 1° botão
     local button1 = gui.Button.create("vai")
     button1:setenabled(true)
@@ -85,7 +102,7 @@ function screen2(root)
     local display = gui.Container.create()
     display:setstyle{
         flex = 1,
-        backgroundcolor = "#f0ff0f"
+        backgroundcolor = "#00640d"
 
     }
     -- cria um label
@@ -93,7 +110,7 @@ function screen2(root)
     mens:setstyle{
         flex = 1
     }
-    mens:settext(tostring(test.data))
+    labelAtual = mens
     display:addchildview(mens)
 
     -- cria o 1° botão
@@ -105,8 +122,9 @@ function screen2(root)
         height = 20
     }
     button1.onclick = function ()  --teste23(display)
-        io.popen("lua janela.lua")
-        des(display, mens)
+        --test.run = true
+        io.popen("lua teste.lua")
+        --des(display, mens)
     end
 
     -- cria o 2° botão
@@ -140,6 +158,14 @@ function screen2(root)
     root:addchildview(panel)
     root:addchildview(display)
 end
+-- função loop
+i = 0
+function __loop(ms)
+    i = i + 1
+    --print(i)
+    writesOnDisplay(tostring(i) .. "\n".. tostring(readfile()))
+    gui.MessageLoop.postdelayedtask(ms, function() __loop(ms) end)
+end
 
 -- cria a janela
 local win = gui.Window.create{}
@@ -161,4 +187,13 @@ win:setcontentview(root)
 win:center()
 win:activate()
 
+print("1-")
+
+
+gui.MessageLoop.posttask(function () print("---") end)
+local ms = 10
+gui.MessageLoop.postdelayedtask(ms, function () __loop(ms) end)
+
+
 gui.MessageLoop.run()
+print("2-")
