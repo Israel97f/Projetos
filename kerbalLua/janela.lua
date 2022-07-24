@@ -1,27 +1,9 @@
 
 package.cpath = "libYue/yue.so"
 local gui = require "yue.gui"
+local test = require "teste"
 
-local Cena = { 
-    --inicial = screen1,
-    secundaria = screen2
-}
-local screen = "inicial"
-
-
-function teste23(display)
-    local message = gui.TextEdit.create()
-    message:setstyle{width = 100, height = 40}
-    display:addchildview(message)    
-    
-        
-    for i = 0, 1000 do
-        message:settext(tostring(i))
-    end
-end
-
-
-function Cena:screen1(root)
+function screen1(root)
 
     local panel = gui.Container.create()
     panel:setstyle{
@@ -99,6 +81,14 @@ function screen2(root)
         backgroundcolor = "#f0ff0f"
 
     }
+    -- cria um label
+    local mens = gui.Label.create("1")
+    mens:setstyle{
+        flex = 1
+    }
+    mens:settext(tostring(test.data))
+    display:addchildview(mens)
+    
     -- cria o 1° botão
     local button1 = gui.Button.create("vai")
     button1:setenabled(true)
@@ -107,8 +97,8 @@ function screen2(root)
         width = 150,
         height = 20
     }
-    button1.onclick = function () 
-        teste23(display)
+    button1.onclick = function ()  --teste23(display)
+        io.popen("lua janela.lua")
     end
 
     -- cria o 2° botão
@@ -130,7 +120,7 @@ function screen2(root)
         height = 20
     }
     button3.onclick = function ()
-        Cena:screen1(root)
+        screen1(root)
         root:removechildview(panel)
         root:removechildview(display)
     end
@@ -157,7 +147,7 @@ root:setstyle{
     --height = 60,
 }
 
-Cena:screen1(root)
+screen1(root)
 
 win:setcontentview(root)
 win:center()
