@@ -75,7 +75,6 @@ def Lauch(alt=0, sas=False):
         __fuel_chek()
         atualiza_display()
 
-        
 
 def Orbitador(alt=70000, type='Equatorial', dir=90):
     global vessel
