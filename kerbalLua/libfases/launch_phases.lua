@@ -27,8 +27,14 @@ function Launch_phases:launch()
 end
 -- pilota o foguete até a orbita
 function Launch_phases:orbiter()
-    
+    while true do
+        if true then
+            break
+        end
+    end
 end
+
+-- inicialização
 function Launch_phases:__Init__(_conn)
     Conn               = _conn
     Vessel             = Conn.space_center.active_vessel
