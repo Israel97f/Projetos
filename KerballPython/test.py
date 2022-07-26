@@ -1,8 +1,11 @@
-from sqlite3 import connect
-import lib.fases
+import lib.fases as fases
+import math
+from time import sleep
+from random import randint
 
-lib.fases.IntConect()
-#lib.fases.Lauch(50000, True)
-#lib.fases.test_2()
-lib.fases.teste()
-lib.fases.Disconect()
+fases.IntConect()
+fases.pouso()#
+
+#fases.test(-67.6)
+#a = fases.distance_burning(250)
+fases.Disconect()

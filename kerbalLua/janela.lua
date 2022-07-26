@@ -109,12 +109,12 @@ function screen2(root)
         margin_right = 10,
         flexdirection = "column",
         justifycontent = "space-evenly",
-        backgroundcolor = "#ff7f7f"
+        backgroundcolor = "#00D998"
     }
     local display = gui.Container.create()
     display:setstyle{
         flex = 1,
-        backgroundcolor = "#00640d",
+        backgroundcolor = "#091F18",
         padding = 20
 
     }
@@ -177,7 +177,7 @@ function __loop(ms)
     i = i + 1
     --writesOnDisplay(tostring(i).. "\n".. tostring(readfile()))
     updateDisplay()
-    print(readfile())
+    --print(readfile())
     gui.MessageLoop.postdelayedtask(ms, function() __loop(ms) end)
 end
 

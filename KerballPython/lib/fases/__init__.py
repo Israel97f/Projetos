@@ -1,8 +1,19 @@
-#from enum import Flag
-#from logging import exception
-#from xml.sax.handler import feature_external_pes
+import math 
 import krpc
 from time import sleep
+
+
+stage = int()
+param = None
+def get_parametro(parametro=None):
+    global param
+    param = parametro
+
+
+def atualiza_display():
+    global param
+    if param != None:
+        param()
 
 
 def IntConect():
@@ -11,208 +22,264 @@ def IntConect():
         i +=1
         try:
             global conn 
-            conn = krpc.connect()
+            conn = krpc.connect()   
         except:
             print(f'\033[31m{"-" * 8}Erro ao executar a conexão{"-" * 8}\033[m')
-            if i > 9 :
+            conn = krpc.connect()   
+            if i >= 1:
                 break
             else:
                 continue
-        else:
-            global vessel
-            global vessel_alt
-            global veloref
-            vessel = conn.space_center.active_vessel
-            veloref = vessel.orbit.body.reference_frame            
-            vessel_alt = vessel.flight( veloref).surface_altitude         
-
+            
+        else:       
+            __telemetry()
             print(f'\033[32m{"-" * 8}Conexão feita com sucesso{"-" * 8}\033[m')
             break
+
+
+def con_state():
+    global conn
+    global Speed
+    state = bool()
+    try:
+        conn.krpc.get_status().version
+    except:
+        state = False
+    else:
+        state = True
+    
+    return state
+
 
 def Disconect():
     global conn
     conn.close()
+    print(f'\033[32m{"-" * 8}Conexão encerrada{"-" * 8}\033[m')
 
 
 def Lauch(alt=0, sas=False):
-    global conn
     global vessel
     global apoastro
-    
-    #vessel = conn.space_center.active_vessel
-    apoastro = addStream(vessel.orbit, 'apoapsis_altitude')
+
     vessel.control.throttle = 1
     vessel.control.activate_next_stage()
-    vessel.auto_pilot.sas = sas
+    vessel.auto_pilot.sas = False
+    vessel.auto_pilot.engage()
+    vessel.auto_pilot.target_pitch_and_heading(90, 90)
     while True:
         if apoastro() >= alt:
             vessel.control.throttle = 0
+            vessel.auto_pilot.disengage()
             break
 
-        fuel_chek()
+        __fuel_chek()
+        atualiza_display()
+
         
 
-def Orbitador(alt=70000):
+def Orbitador(alt=70000, type='Equatorial', dir=90):
     global vessel
-    global altitude
-    global veloref
-    altitude = addStream(vessel.flight(), 'mean_altitude')
-    apoastro = addStream(vessel.orbit, 'apoapsis_altitude')
-    periastro = addStream(vessel.orbit, 'periapsis_altitude')
-    veloref = vessel.orbit.body.reference_frame
-    Speed = addStream(vessel.flight(veloref), 'speed')
+    global altitude   
+    global apoastro 
+    global periastro 
+    global Speed 
+    global Speed_orbit
+    global surface_gravity
+    global time_to_apoapsis
+    global gravitational_parameter
+    global equatorial_radius
+    global mass
+    global max_thrust 
+
     vessel.auto_pilot.sas = False
     vessel.auto_pilot.engage()
-    vessel.control.throttle = 1
+    vessel.control.throttle = mass() * surface_gravity * 1.5 /(max_thrust())
     first_stage = 0
 
-    while True:
-        fuel_chek()       
-        frac = altitude()/45000
-        if frac > 1:
-            frac = 1
+    if dir == 90:
+        if type == "Equatorial":  # linha opicional
+            dir = 90
+        elif type == "Polar":
+            dir = 0
+        elif type == "Rev_Equarorial":
+            dir = 270
+        elif type == "Rev_Polar":
+            dir = 180
+        else:
+            dir = 90
 
-        vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * frac), 90)
+    while True:
+        __fuel_chek()   
+        speed_orbit = math.sqrt(gravitational_parameter/(equatorial_radius + alt))
+        time_burn = (speed_orbit - Speed_orbit()) / (max_thrust() / mass()) 
+
+        frac = (- ((altitude() /45000)** 2) + (2 * altitude() /45000))
+        if frac > 1 or frac < 0 or altitude() > 45000:
+            frac = 1
         
-        if apoastro() > (alt * 0.9):
-            vessel.control.throttle = vessel.mass * 9.6 * 1.4 /( vessel.max_thrust)
+        vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * frac), dir)
+        
+        if alt > apoastro() > (alt * 0.9):
+            vessel.control.throttle = mass() * surface_gravity * 1.4 /( max_thrust())
 
         if apoastro() > alt:
             vessel.control.throttle = 0
+
+        if Speed_orbit() > 2000 and first_stage == 0 and altitude() > 45000:
+            vessel.control.throttle = 0
+            sleep(0.1)
+            vessel.control.activate_next_stage()
+            sleep(2)
+            first_stage = 1
+            vessel.control.throttle = 1
+
+        if (time_burn / 2) <= time_to_apoapsis() and (alt - altitude()) < 4000:
+            vessel.auto_pilot.target_pitch_and_heading( 0, dir)
+            vessel.control.throttle = 1
             break
+        atualiza_display()
         
     while True:
-        fuel_chek()
-        if abs(periastro() - apoastro()) > 10000 or periastro() < 70000:
-            if apoastro() - altitude() < 700:
-                if Speed() > 1900 and first_stage == 0:
-                    vessel.control.throttle = 0
-                    sleep(0.1)
-                    vessel.control.activate_next_stage()
-                    sleep(2)
-                    first_stage = 1
-
-                vessel.control.throttle = 1
-                print(Speed())
-            else:
-                vessel.control.throttle = 0
-                sleep(1)
-        else:
+        __fuel_chek()
+        
+        if Speed_orbit() > 2000 and first_stage == 0:
             vessel.control.throttle = 0
+            sleep(0.1)
+            vessel.control.activate_next_stage()
+            sleep(2)
+            first_stage = 1
+            vessel.control.throttle = 1
+
+            
+        if abs(periastro() - apoastro()) < 2000 or alt * 1.3 < apoastro():
+            vessel.control.throttle = 0
+            vessel.auto_pilot.disengage()
             break
 
-    vessel.auto_pilot.disengage()
+        atualiza_display()
 
 
 def verticalLanding():
     global vessel
-    global veloref 
+    global Speed
+    global vertical_speed 
     global surface_altitude
-    veloref = vessel.orbit.body.reference_frame
-    Speed = addStream(vessel.flight(veloref), 'speed')
-    surface_altitude = addStream(vessel.flight(), 'surface_altitude')
-    vessel.auto_pilot.sas = True
-    
+    global surface_gravity
+    global mass
+    global max_thrust
+
+
+    vessel.control.throttle = 1
+    sleep(1)
+    vessel.auto_pilot.sas = True    
     vessel.control.throttle = 0
     
     while True:
-        if direction_movement() == -1:
-            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+        
+        if vertical_speed() < 0:
+            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
+ 
             try:
-                d = ((Speed() ** 2 - 2500)/ (2*(vessel.max_thrust / vessel.mass - 9.6))) + 100
+                d1 = distance_burning(Speed() - 25) + 0.8 * Speed() 
+                d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
             except:
-                d = 1000
-            print('-' * 20)
-            print(d)
-            print(Speed())
-            print(Speed() ** 2)
-            print(Speed() * Speed())
-
-            if surface_altitude() <= d and d < 12000:
+                d1 = 1000
+                d2 = 500
+                print(f'=============//============//================//===================//==============')
+            
+            if surface_altitude() <= d1 + d2 and d1 < 6000:                
                 vessel.control.throttle = 1
+
+            if surface_altitude() < 100:
+                vessel.control.gear = True
+
+            if Speed() <= 25:
                 break
+
+        sleep(0.1)
+        atualiza_display()
 
 
     while True:
         try:
-            delta = ((3 ** 2 - 50 ** 2) / ((-2) * (((vessel.max_thrust / vessel.mass ) * 0.8) - (9.81))))
+            d2 = (25 ** 2 - 25) / (2 * 4.9)
         except:
-            delta = 250
+            d2 = 150
+    
+        if surface_altitude() < d2 or Speed() < 25:
+            vessel.control.throttle = (4.9 / surface_gravity + 1) * surface_gravity * mass() / max_thrust()
+            
 
-        print(delta)
-
-        if surface_altitude() < (delta + 50):
+        if Speed() < 5:
             pouso()
             break
-        
-        if Speed() <= 50.00 and direction_movement() == -1:
-            vessel.control.throttle = 0.94 * 9.6 * vessel.mass / vessel.max_thrust
-           
 
-def direction_movement():
-    altitude = addStream(vessel.flight(), 'mean_altitude')
-    altitude_anterior = altitude()
-    ret = 0
-    while True:
-        if abs(altitude() - altitude_anterior) > 0:
-            
-            if altitude() - altitude_anterior > 0:
-                ret = 1
-            else:
-                ret = -1
+        atualiza_display()
 
-            altitude_anterior = altitude()
-            break
-    return ret
-       
 
-def addStream(classe, metodo):
+def  __addStream(classe, metodo):
     global conn
     return conn.add_stream(getattr, classe, metodo )
 
 
 def pouso():
     global vessel
-    global surface_altitude
-    vessel = conn.space_center.active_vessel
-    veloref = vessel.orbit.body.reference_frame
-    #Speed = addStream(vessel.flight(veloref), 'speed')
-    vertical_speed = addStream(vessel.flight(veloref), 'vertical_speed')
-    horizontal_speed = addStream(vessel.flight(veloref), 'horizontal_speed')
+    global surface_altitude   
+    global vertical_speed 
+    global horizontal_speed 
+    global surface_gravity
+    global retrograde_
+    global mass
+    global max_thrust
+    global dir_vessel
+    global dir_retrograde
+
+    dire = tuple()
     vessel.auto_pilot.engage()
-    vessel.auto_pilot.target_pitch_and_heading(90, 90)
-    #vessel.control.activate_next_stage()
+    vessel.auto_pilot.target_pitch_and_heading(90, 90) 
     vessel.control.gear = True
-    sleep(0.1)
-    
+    caminho = 0
+    sleep(0.1) 
     
     while True:
-        ### precisa de melhorias
-        #if  horizontal_speed() > 2 and surface_altitude() < 100 and  0 > vertical_speed() > -5.0:
-        #   vessel.auto_pilot.disengage()
-        #   vessel.auto_pilot.sas = True
-        #   vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
-        #else:
-        #   vessel.auto_pilot.sas = False
-        #   vessel.auto_pilot.engage()
-        #   vessel.auto_pilot.target_pitch_and_heading(90, 90)
-        ###===========
-        if vertical_speed() < -5.0:
-            vessel.control.throttle = 0.8 #2.17 * 9.6 * vessel.mass / vessel.max_thrust
-        elif vertical_speed() > 0:
-            vessel.control.throttle = 0.93 * 9.6 * vessel.mass / vessel.max_thrust
+
+        if horizontal_speed() > 20:
+            vessel.auto_pilot.disengage()
+            vessel.auto_pilot.sas = True
+            vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde
+            engine_angle = 0
+            
+        elif horizontal_speed() > 1:
+            
+            vessel.auto_pilot.sas = False
+            vessel.control.rcs = True
+            vessel.auto_pilot.engage()
+            vessel.auto_pilot.deceletation_time = (0.5, 0.5, 0.5)
+            vessel.auto_pilot.attenuation_angle = (0.5, 0.5, 0.5)
+            vessel.auto_pilot.target_direction = pos_retrograde()
+            
         else:
-            vessel.control.throttle = 9.6 * vessel.mass / vessel.max_thrust
+            vessel.auto_pilot.sas = False
+            vessel.auto_pilot.engage()
+            vessel.auto_pilot.target_direction = (1, 0, 0)
+        
+        if vertical_speed() < -5.0:
+            vessel.control.throttle = 1.2 * surface_gravity * mass() / max_thrust()
+        elif vertical_speed() > 0:
+            vessel.control.throttle = 0.9 * surface_gravity * mass() / max_thrust()
+        else:
+            vessel.control.throttle = 0.99 * surface_gravity * mass() / (max_thrust())
             if vessel.situation == vessel.situation.landed or vessel.situation == vessel.situation.splashed:
                 vessel.control.throttle = 0
                 vessel.auto_pilot.disengage()
                 vessel.auto_pilot.sas = True
-                break  
+                break 
+    
+        atualiza_display()
 
 
-def fuel_chek():
-    global stage 
-    stage = int()   
+def __fuel_chek():
+    global stage    
     while len(vessel.parts.in_stage(stage)) > 0: # calcula quantos estagios a nave tem
         stage += 1 
 
@@ -225,26 +292,149 @@ def fuel_chek():
         stage -= 1
 
 
-def teste():
+def __telemetry():
+    global conn
     global vessel
-    global veloref 
-    global vessel_alt
+    global apoastro
+    global periastro
+    global altitude
     global surface_altitude
+    global Speed
+    global Speed_orbit
+    global vertical_speed
+    global horizontal_speed
+    global surface_gravity
+    global time_to_apoapsis
+    global gravitational_parameter
+    global equatorial_radius
+    global retrograde_
+    global mass
+    global max_thrust
+    global dir_retrograde
+    global dir_vessel
+    global ref_Surfece
+    global veloref_orbit
+    global tagetreft
+    global SufVelReferance_frame
+    global veloref
+    global vet_velo
+    global specific_impulse
+
+    vessel = conn.space_center.active_vessel
     veloref = vessel.orbit.body.reference_frame
-    
-    
-    #part = conn.space_center.active_vessel.
-    vertical_speed = addStream(vessel.flight(veloref), 'vertical_speed')
-    i = 0
-    while True:
-       print(surface_altitude())
-       print(vessel.situation == vessel.situation.landed)
-       sleep(2)
-       i += 1
-       if i > 10:
-           break
+    veloref_orbit = vessel.orbit.body.orbital_reference_frame
+    tagetreft = vessel.auto_pilot.reference_frame
+    SufVelReferance_frame = vessel.surface_velocity_reference_frame
+    ref_Surfece = vessel.surface_reference_frame
+    surface_gravity = vessel.orbit.body.surface_gravity
+    gravitational_parameter = vessel.orbit.body.gravitational_parameter
+    equatorial_radius = vessel.orbit.body.equatorial_radius
+    specific_impulse = vessel.specific_impulse
+
+    apoastro = __addStream(vessel.orbit, 'apoapsis_altitude')
+    periastro = __addStream(vessel.orbit, 'periapsis_altitude')
+    time_to_apoapsis = __addStream(vessel.orbit, 'time_to_apoapsis')
+    altitude = __addStream(vessel.flight(), 'mean_altitude')
+    surface_altitude = __addStream(vessel.flight(), 'surface_altitude')
+    Speed = __addStream(vessel.flight(veloref), 'speed')
+    Speed_orbit = __addStream(vessel.flight(veloref_orbit), 'speed')
+    vertical_speed = __addStream(vessel.flight(veloref), 'vertical_speed')
+    horizontal_speed = __addStream(vessel.flight(veloref), 'horizontal_speed')
+    mass = __addStream(vessel, 'mass')
+    max_thrust = __addStream(vessel, 'max_thrust') 
 
 
-def test_2():
+    dir_retrograde = __addStream(vessel.flight(veloref), 'retrograde')
+    vet_velo = __addStream(vessel.flight(veloref), 'velocity')
+
+
+def get_telemetry():
+    global apoastro
+    global periastro
+    global altitude
     global surface_altitude
-    surface_altitude = addStream(vessel.flight(), 'surface_altitude')
+    global Speed
+    global vertical_speed
+    global horizontal_speed
+    global surface_gravity
+
+    return [ apoastro(), 
+    periastro(), 
+    altitude(),
+    surface_altitude(),
+    Speed(),
+    vertical_speed(),
+    horizontal_speed(),
+    surface_gravity]
+
+
+def pos_retrograde():
+    global veloref
+    global ref_Surfece
+    global vet_velo
+    global conn
+
+    w = conn.space_center.transform_position(vet_velo(), veloref, ref_Surfece)
+
+    dir_h = (-w[1], -w[2])
+
+    angle = math.degrees(math.atan2(dir_h[1], dir_h[0]))
+
+    if angle < 0:
+        angle *= -1
+        angle = 360 - angle
+
+    angle = angle * math.pi / 180
+
+    kn = abs(math.sqrt(math.cos(85 * math.pi / 180) ** 2 / (math.sin(angle) ** 2 + math.cos(angle) ** 2)))
+
+    return (math.sin(85 * math.pi / 180), kn * math.cos(angle), kn * math.sin(angle))
+
+
+def distance_burning(dv=0.0):
+    global specific_impulse
+    global surface_gravity
+    global surface_altitude
+    global mass
+    global Speed
+    global horizontal_speed
+    global vertical_speed
+    global max_thrust
+    
+
+    k = max_thrust() / (specific_impulse * 5 * 9.8)
+
+    speed_variation = dv + abs(math.sqrt(2 * surface_gravity * surface_altitude()))
+    burning_time = (1 - 1 / math.e ** (speed_variation / (specific_impulse * 5 * 9.8 ) ) ) * mass() / k
+    acceleration = speed_variation / burning_time
+
+    distance = (Speed() ** 2 - 25) / (2 * acceleration) * math.sin(math.atan(- vertical_speed() / horizontal_speed()))
+
+    print(max_thrust()/mass())
+    print(acceleration)
+    print(distance)
+    print('========//===========//========')
+
+
+    return distance
+
+
+def test(altt=0):
+    global specific_impulse
+    global vessel
+    a = specific_impulse
+    b = vessel.parts.engines
+    k = 0
+    for c in b:
+        if c.active:
+            k += c.max_thrust / (5 * c.specific_impulse * 9.8)
+            print(f'{c.max_thrust} -- {c.specific_impulse}')
+
+    print(max_thrust())
+
+    print(mass())
+
+    print(k)
+    print(a)
+    print(b)
+    
