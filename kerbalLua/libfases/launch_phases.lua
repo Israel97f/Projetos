@@ -21,9 +21,16 @@ function Launch_phases:disconect ()
     Conn:close()
 end
 -- executa um lançamento simples
-function Launch_phases:launch()
-
+function Launch_phases:launch(_height, _sas)
+    Vessel.control.throttle = 1
+    Vessel.control.sas_mode = _sas or false
+    Vessel.auto_pilot:engage()
     Vessel:activate_next_stage()
+    while true do
+        if 5 >=_height then
+            break
+        end
+    end
 end
 -- pilota o foguete até a orbita
 function Launch_phases:orbiter()
@@ -38,6 +45,6 @@ end
 function Launch_phases:__Init__(_conn)
     Conn               = _conn
     Vessel             = Conn.space_center.active_vessel
-    height_apostrophe  = Vessel.orbit.apoapsis
+    apoapsis_altitude  = Vessel.orbit.apoapsis_altitude
 end
 return Launch_phases
