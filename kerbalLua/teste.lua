@@ -11,29 +11,29 @@ function test:__sleep(ms)
 end
 
 function writeFile(_data)
-        local file = io.open("tempfile.data",  "w+")
-
-        if file ~= nil then
-            file:write(_data)
+    local file = io.open("tempfile.data", "w+")
+    if file ~= nil then
+        for i, v in pairs(_data) do
+            file:write(string.format("%-15s%s%10.2f%s", i, ":", v, "\n" ) )
             --print(file:read("*a"))
-            file:close()
-
+        end
+        file:close()
     end
 end
 
 if test.run == true then
 
-    for i = 0, 300 do
-        test:__sleep(100)
-        print(i)
-        test.data = string.format([[
-            velocidade:
-            aceleração:
-            gravidade :
-            empuxo    :
-            batata    :
-            iterador  : %i
-        ]], i)
+    for i = 0, 1200 do
+        test:__sleep(50)
+        --print(i)
+        test.data = {
+            velocidade = 0,
+            altura     = 0,
+            apoastro   = 0,
+            periastro  = 0,
+            gravidade  = 9.5,
+            iterador   = i,
+        }
         writeFile(test.data)
 
     end

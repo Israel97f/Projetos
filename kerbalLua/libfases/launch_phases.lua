@@ -16,12 +16,19 @@ function Launch_phases:conect()
         print("problema ao tentar conectar")
     end
 end
+-- realiza o encerramento da conexão
+function Launch_phases:disconect ()
+    Conn:close()
+end
 -- executa um lançamento simples
 function Launch_phases:launch()
 
     Vessel:activate_next_stage()
 end
-
+-- pilota o foguete até a orbita
+function Launch_phases:orbiter()
+    
+end
 function Launch_phases:__Init__(_conn)
     Conn               = _conn
     Vessel             = Conn.space_center.active_vessel

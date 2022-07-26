@@ -6,15 +6,26 @@ local labelAtual = nil
 
 
 function writesOnDisplay(_data)
-    labelAtual:settext(_data)
+    if _data ~= nil and type(_data) == "string" and _data ~= '' then
+        labelAtual:setalign("start")
+        labelAtual:settext(_data)
+    end
+end
+
+function updateDisplay()
+    local text = readfile()
+    if text ~= nil then
+        writesOnDisplay(text)
+    end
 end
 
 function readfile()
     local data = nil
-   
         local file = io.open("tempfile.data", "r")
-        data = file:read("*a")
-        io.close(file)
+        if file ~= nil then
+            data = file:read("*a")
+            file:close()
+        end
     return data
 end
 
@@ -31,7 +42,8 @@ function screen1(root)
     local display = gui.Container.create()
     display:setstyle{
         flex = 1,
-        backgroundcolor = "#000f0f"
+        backgroundcolor = "#000f0f",
+        padding = 20
 
     }
     -- cria um label
@@ -102,7 +114,8 @@ function screen2(root)
     local display = gui.Container.create()
     display:setstyle{
         flex = 1,
-        backgroundcolor = "#00640d"
+        backgroundcolor = "#00640d",
+        padding = 20
 
     }
     -- cria um label
@@ -123,7 +136,7 @@ function screen2(root)
     }
     button1.onclick = function ()  --teste23(display)
         --test.run = true
-        io.popen("lua teste.lua")
+        _ = io.popen("lua teste.lua", "r")
         --des(display, mens)
     end
 
@@ -162,8 +175,9 @@ end
 i = 0
 function __loop(ms)
     i = i + 1
-    --print(i)
-    writesOnDisplay(tostring(i) .. "\n".. tostring(readfile()))
+    --writesOnDisplay(tostring(i).. "\n".. tostring(readfile()))
+    updateDisplay()
+    print(readfile())
     gui.MessageLoop.postdelayedtask(ms, function() __loop(ms) end)
 end
 
@@ -191,7 +205,7 @@ print("1-")
 
 
 gui.MessageLoop.posttask(function () print("---") end)
-local ms = 10
+local ms = 33
 gui.MessageLoop.postdelayedtask(ms, function () __loop(ms) end)
 
 
