@@ -23,7 +23,7 @@ end
 -- executa um lançamento simples
 function Launch_phases:launch(_height, _sas)
     Vessel.control.throttle = 1
-    Vessel.control.sas_mode = _sas or false
+    Vessel.auto_pilot.sas_mode = _sas or false
     if _sas then
         Vessel.auto_pilot:engage()
         Vessel:activate_next_stage()
@@ -38,7 +38,7 @@ end
 -- pilota o foguete até a orbita
 function Launch_phases:orbiter(_height, _type, _direction)
     Vessel.control.throttle = mass * surface_gravity * 1.5 / max_thrust
-    Vessel.control.sas_mode = false
+    Vessel.auto_pilot.sas_mode = false
     Vessel.auto_pilot:engage()
     Vessel.auto_pilot:target_pitch_and_heading(90, 90)
     Vessel:activate_next_stage()
@@ -64,6 +64,8 @@ function Launch_phases:orbiter(_height, _type, _direction)
         end
         if _height > apoapsis_altitude > (_height * 0.9) then
             Vessel.control.throttle = mass * surface_gravity * 1.4 / max_thrust
+        elseif apoapsis_altitude > _height then
+            Vessel.control.throttle = 0
         end
 
         if time_burn / 2 <= time_to_apoapsis and _height - height_sea_level < 4000 then
@@ -73,12 +75,27 @@ function Launch_phases:orbiter(_height, _type, _direction)
         end
     end
     while true do
-        if true then
-            --pass
+        if math.abs(apoapsis_altitude - periapsis_altitude) < 2000 or
+           apoapsis_altitude > _height * 1.3 then
+            Vessel.control.throttle = 0
+            Vessel.auto_pilot:disengage()
+            break
         end
     end
 end
-
+-- realiza o pouso vertical
+function Launch_phases:vertical_landing()
+    Vessel.control.throttle = 0
+    Vessel.auto_pilot.sas_mode = true
+    while true do
+        if vertical_speed < 0 then
+            Vessel.auto_pilot.sas_mode = Vessel.auto_pilot.sas_mode.retrograde
+        end
+        if true then
+            break
+        end
+    end
+end
 -- inicialização
 function Launch_phases:__Init__(_conn)
     Conn               = _conn
@@ -87,6 +104,7 @@ function Launch_phases:__Init__(_conn)
     Veloref_orbit      = Vessel.orbit.body.orbital_reference_frame
 
     apoapsis_altitude  = Vessel.orbit.apoapsis_altitude
+    periapsis_altitude = Vessel.orbit.periapsis_altitude
     time_to_apoapsis   = Vessel.orbit.time_to_apoapsis
     mass               = Vessel.mass
     surface_gravity    = Vessel.orbit.body.surface_gravity
@@ -94,6 +112,8 @@ function Launch_phases:__Init__(_conn)
     equatorial_radius  = Vessel.orbit.body.equatorial_radius
     gravitational_para = Vessel.orbit.body.gravitational_parameter
     speed_orbit        = Vessel.flight(Veloref_orbit).speed
+    vertical_speed     = Vessel.flight(Veloref).vertical_speed
+    horizontal_speed   = Vessel.flight(Veloref).horizontal_speed
     height_sea_level   = Vessel.flight(Veloref).mean_altitude
 end
 return Launch_phases
