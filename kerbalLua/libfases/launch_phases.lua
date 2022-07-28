@@ -91,10 +91,21 @@ function Launch_phases:vertical_landing()
         if vertical_speed < 0 then
             Vessel.auto_pilot.sas_mode = Vessel.auto_pilot.sas_mode.retrograde
         end
+        local distance = 1
         if true then
             break
         end
     end
+end
+-- calcula a distancia necessária para redução da velocidade
+function distance_burning(_delta_v)
+    local rate = max_thrust / (specific_impulse * 5 * 9.8)
+    local speed_variation = _delta_v + math.abs(math.sqrt(surface_gravity * height_ground_lv))
+    local burning_time = (1 - 1 / math.exp(speed_variation / specific_impulse * 5 * 9.8)) * mass * rate
+    local acceleration = speed_variation / burning_time
+    local distance = (speed ^ 2 - 25) / (2 * acceleration) *
+    math.sin(math.atan(vertical_speed, horizontal_speed))
+    return distance
 end
 -- inicialização
 function Launch_phases:__Init__(_conn)
@@ -111,9 +122,12 @@ function Launch_phases:__Init__(_conn)
     max_thrust         = Vessel.max_thrust
     equatorial_radius  = Vessel.orbit.body.equatorial_radius
     gravitational_para = Vessel.orbit.body.gravitational_parameter
+    specific_impulse   = Vessel.specific_impulse
     speed_orbit        = Vessel.flight(Veloref_orbit).speed
+    speed              = Vessel.flight(Veloref).speed
     vertical_speed     = Vessel.flight(Veloref).vertical_speed
     horizontal_speed   = Vessel.flight(Veloref).horizontal_speed
     height_sea_level   = Vessel.flight(Veloref).mean_altitude
+    height_ground_lv   = Vessel.flight(Veloref).surface_altitude
 end
 return Launch_phases
