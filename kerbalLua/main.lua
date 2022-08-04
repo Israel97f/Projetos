@@ -9,5 +9,5 @@ if tryed then
     local vessel = conn.space_center.active_vessel
     vessel.control:activate_next_stage()
 else
-    print("falhou")
+    print("falhou!")
 end
