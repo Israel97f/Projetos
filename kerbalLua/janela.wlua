@@ -1,5 +1,5 @@
 
-package.cpath = "libYue/yue.so"
+package.cpath = "libYue/lua51_yue_win/yue.dll; libYue/lua51_yue_Linux/?.so"
 local gui = require "yue.gui"
 --local test = require "teste"
 local labelAtual = nil
