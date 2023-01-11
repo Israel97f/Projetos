@@ -1,5 +1,5 @@
 -- Specify where to find yue.gui module.
-package.cpath = 'libYue/lua51_yue_win/?.dsll;libYue/lua51_yue_Linux/?.so'
+package.cpath = 'libYue/lua51_yue_win/?.dll;libYue/lua51_yue_Linux/?.so'
 
 local gui = require('yue.gui')
 
