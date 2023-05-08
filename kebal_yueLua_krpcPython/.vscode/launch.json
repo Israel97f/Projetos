@@ -1,0 +1,16 @@
+{
+    // Use o IntelliSense para saber mais sobre os atributos possíveis.
+    // Focalizar para exibir as descrições dos atributos existentes.
+    // Para obter mais informações, acesse: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "lua.debug.settings.path": "C:\\Lua\\lua54\\wlua54.exe",
+    "configurations": [
+        
+        {
+            "type": "lua",
+            "request": "launch",
+            "name": "Debug",
+            "program": "${workspaceFolder}/UILua/janela.wlua"
+        }
+    ]
+}
