@@ -54,12 +54,12 @@ function ScreeOrbital()
     button5:setstyle{margintop = "20"}
 
     local selectionBox = Ui.ComboBox.create()
-    for i, v in pairs({"flor", "bala", "cavalo", "melancia"}) do selectionBox:additem(v) end
+    for i, v in pairs({"Equatorial", "Polar", "Rev_Equarorial", "Rev_Polar"}) do selectionBox:additem(v) end
     selectionBox:setstyle{margintop = "20"}
 
     local selectionBox2 = Ui.ComboBox.create()
     selectionBox2:setstyle{margintop = "20"}
-    for i, v in pairs({"flor", "bala", "cavalo", "melancia"}) do selectionBox2:additem(v) end
+    for i = 0, 80 do selectionBox2:additem(tostring(70000 + 1000 * i)) end
 
     return {button1, button2, button3, button4}, {selectionBox, selectionBox2,button5}
 end
