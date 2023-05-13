@@ -26,6 +26,7 @@ end
 function ScreeMode()
     local button1 = Ui.Button.create("suborbital")
     button1:setstyle{backgroundcolor = "#1B4BEF"}
+    button1.onclick = function () ScreenChange(3) end
     local button2 = Ui.Button.create("orbital")
     button2.onclick = function () ScreenChange(4) end
     local button3 = Ui.Button.create("aterrissar")
@@ -40,17 +41,14 @@ function ScreeMode()
     return {button1, button2, button3, button4}, {label}
 end
 
-function ScreeOrbital()
-    local button1 = Ui.Button.create("suborbital")
+function ScreeSubOrbital()
+    local button1 = Ui.Button.create("Iniciar")
     button1:setstyle{backgroundcolor = "#1B4BEF"}
-    local button2 = Ui.Button.create("orbital")
-    button2.onclick = function () ScreenChange(4) end
-    local button3 = Ui.Button.create("aterrissar")
-    local button4 = Ui.Button.create("voltar")
-    button4.onclick = function () ScreenChange(1) end
+    local button2 = Ui.Button.create("voltar")
+    button2.onclick = function () ScreenChange(2) end
 
     local button5 = Ui.Button.create("voltar")
-    button5.onclick = function () ScreenChange(1) end
+    button5.onclick = function () button2:enabled(false) end
     button5:setstyle{margintop = "20"}
 
     local selectionBox = Ui.ComboBox.create()
@@ -61,7 +59,28 @@ function ScreeOrbital()
     selectionBox2:setstyle{margintop = "20"}
     for i = 0, 80 do selectionBox2:additem(tostring(70000 + 1000 * i)) end
 
-    return {button1, button2, button3, button4}, {selectionBox, selectionBox2,button5}
+    return {button1, button2}, {selectionBox, selectionBox2,button5}
+end
+
+function ScreeOrbital()
+    local button1 = Ui.Button.create("Iniciar")
+    button1:setstyle{backgroundcolor = "#1B4BEF"}
+    local button2 = Ui.Button.create("voltar")
+    button2.onclick = function () ScreenChange(2) end
+
+    local button5 = Ui.Button.create("voltar")
+    button5.onclick = function () button2:enabled(false) end
+    button5:setstyle{margintop = "20"}
+
+    local selectionBox = Ui.ComboBox.create()
+    for i, v in pairs({"Equatorial", "Polar", "Rev_Equarorial", "Rev_Polar"}) do selectionBox:additem(v) end
+    selectionBox:setstyle{margintop = "20"}
+
+    local selectionBox2 = Ui.ComboBox.create()
+    selectionBox2:setstyle{margintop = "20"}
+    for i = 0, 80 do selectionBox2:additem(tostring(70000 + 1000 * i)) end
+
+    return {button1, button2}, {selectionBox, selectionBox2,button5}
 end
 
 function ScreenChange(tela)
@@ -70,7 +89,7 @@ function ScreenChange(tela)
 end
 
 function RefreshScreen()
-    local screens = {ScreeInicial, ScreeMode, ScreeMode, ScreeOrbital}
+    local screens = {ScreeInicial, ScreeMode, ScreeSubOrbital, ScreeOrbital}
     local panelConponents, displayComponents = screens[Index]()
 
     for i = 1, Subbox:childcount() do
