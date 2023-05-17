@@ -7,13 +7,13 @@ function ScreeInicial()
     local button1 = Ui.Button.create("")
     button1:setstyle{backgroundcolor = "#2B2B2B"}
     button1.onclick = function ()
-        local path = "but2.png"
+        local path = "imagens/but2.png"
         local imagen = Ui.Image.createfrompath(path)
         button1:setimage(imagen)
         Ui.MessageLoop.postdelayedtask(100, function() ScreenChange(2) end)
         end
 
-    local path = "but.png"
+    local path = "imagens/but.png"
     local imagen = Ui.Image.createfrompath(path)
     button1:setimage(imagen)
 
@@ -30,6 +30,7 @@ function ScreeMode()
     local button2 = Ui.Button.create("orbital")
     button2.onclick = function () ScreenChange(4) end
     local button3 = Ui.Button.create("aterrissar")
+    button3.onclick = function () ScreenChange(5) end
     local button4 = Ui.Button.create("voltar")
     button4.onclick = function () ScreenChange(1) end
 
@@ -44,6 +45,7 @@ end
 function ScreeSubOrbital()
     local button1 = Ui.Button.create("Iniciar")
     button1:setstyle{backgroundcolor = "#1B4BEF"}
+    button1.onclick = function () ScreenChange(5) end
     local button2 = Ui.Button.create("voltar")
     button2.onclick = function () ScreenChange(2) end
 
@@ -65,6 +67,7 @@ end
 function ScreeOrbital()
     local button1 = Ui.Button.create("Iniciar")
     button1:setstyle{backgroundcolor = "#1B4BEF"}
+    button1.onclick = function () ScreenChange(5) end
     local button2 = Ui.Button.create("voltar")
     button2.onclick = function () ScreenChange(2) end
 
@@ -83,13 +86,20 @@ function ScreeOrbital()
     return {button1, button2}, {selectionBox, selectionBox2,button5}
 end
 
+function ScreenDisplay ()
+    local button1 = Ui.Button.create("abortar")
+    local Label = Ui.Label.create("")
+
+    return {button1}, {Label}
+end
+
 function ScreenChange(tela)
     Index = tela
     RefreshScreen()
 end
 
 function RefreshScreen()
-    local screens = {ScreeInicial, ScreeMode, ScreeSubOrbital, ScreeOrbital}
+    local screens = {ScreeInicial, ScreeMode, ScreeSubOrbital, ScreeOrbital, ScreenDisplay}
     local panelConponents, displayComponents = screens[Index]()
 
     for i = 1, Subbox:childcount() do
