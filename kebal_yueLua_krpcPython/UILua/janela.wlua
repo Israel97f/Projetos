@@ -1,6 +1,7 @@
--- executar com wlua.exe
-package.cpath = "yueLua54/win64/?.dll"
+-- IIIIIIIIIII --
+package.cpath = "UILua/yueLua54/win64/?.dll"
 local Ui = require "yue.gui"
+local file = require "gerenciador_tmp/temporary_file_manager"
 
 -----------
 function ScreeInicial()
@@ -13,7 +14,7 @@ function ScreeInicial()
         Ui.MessageLoop.postdelayedtask(100, function() ScreenChange(2) end)
         end
 
-    local path = "imagens/but.png"
+    local path = "UILua/imagens/but.png"
     local imagen = Ui.Image.createfrompath(path)
     button1:setimage(imagen)
 
@@ -88,9 +89,22 @@ end
 
 function ScreenDisplay ()
     local button1 = Ui.Button.create("abortar")
-    local Label = Ui.Label.create("")
-
+    Label = Ui.Label.create("")
+    local font = Ui.Font.createfrompath("UILua/fonte/Azeret_Mono/AzeretMono-VariableFont_wght.ttf", 14)
+    Label:setstyle{color = "#FFFFFF", backgroundcolor = "#0F0F0F"}
+    Label:settext(file:Read())
+    Label:setfont(font)
+    Loop()
     return {button1}, {Label}
+end
+
+function UpdateDisplay ()
+    Label:settext(file:Read())
+end
+
+function Loop()
+    UpdateDisplay()
+    Ui.MessageLoop.postdelayedtask( 33,function () Loop() end)
 end
 
 function ScreenChange(tela)
