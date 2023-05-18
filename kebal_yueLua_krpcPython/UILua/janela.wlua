@@ -6,52 +6,57 @@ local file = require "gerenciador_tmp/temporary_file_manager"
 -----------
 function ScreeInicial()
     local button1 = Ui.Button.create("")
-    button1:setstyle{backgroundcolor = "#2B2B2B"}
-    button1.onclick = function ()
-        local path = "imagens/but2.png"
-        local imagen = Ui.Image.createfrompath(path)
-        button1:setimage(imagen)
-        Ui.MessageLoop.postdelayedtask(100, function() ScreenChange(2) end)
-        end
-
     local path = "UILua/imagens/but.png"
     local imagen = Ui.Image.createfrompath(path)
     button1:setimage(imagen)
+    button1:setstyle{backgroundcolor = "#2B2B2B"}
 
     local label = Ui.Label.create("texto")
     label:setalign("start")
     label:settext("rabo de  cavalo")
+
+    button1.onclick = function ()
+        local path = "UILua/imagens/but2.png"
+        local imagen = Ui.Image.createfrompath(path)
+        button1:setimage(imagen)
+        Ui.MessageLoop.postdelayedtask(100, function() ScreenChange(2) end)
+    end
+
     return {button1}, {label}
 end
 
 function ScreeMode()
     local button1 = Ui.Button.create("suborbital")
     button1:setstyle{backgroundcolor = "#1B4BEF"}
-    button1.onclick = function () ScreenChange(3) end
+
     local button2 = Ui.Button.create("orbital")
-    button2.onclick = function () ScreenChange(4) end
+
     local button3 = Ui.Button.create("aterrissar")
-    button3.onclick = function () ScreenChange(5) end
+
     local button4 = Ui.Button.create("voltar")
-    button4.onclick = function () ScreenChange(1) end
+
 
     local label = Ui.Label.create("texto")
     label:setalign("start")
     label:setcolor("#FFFFFF")
     label:setstyle{backgroundcolor = "#FFFFFF"}
     label:settext("rabo de cavalo")
+
+    button1.onclick = function () ScreenChange(3) end
+    button2.onclick = function () ScreenChange(4) end
+    button3.onclick = function () ScreenChange(5) end
+    button4.onclick = function () ScreenChange(1) end
+
     return {button1, button2, button3, button4}, {label}
 end
 
 function ScreeSubOrbital()
     local button1 = Ui.Button.create("Iniciar")
     button1:setstyle{backgroundcolor = "#1B4BEF"}
-    button1.onclick = function () ScreenChange(5) end
+
     local button2 = Ui.Button.create("voltar")
-    button2.onclick = function () ScreenChange(2) end
 
     local button5 = Ui.Button.create("voltar")
-    button5.onclick = function () button2:enabled(false) end
     button5:setstyle{margintop = "20"}
 
     local selectionBox = Ui.ComboBox.create()
@@ -61,6 +66,13 @@ function ScreeSubOrbital()
     local selectionBox2 = Ui.ComboBox.create()
     selectionBox2:setstyle{margintop = "20"}
     for i = 0, 80 do selectionBox2:additem(tostring(70000 + 1000 * i)) end
+
+    button1.onclick = function ()
+        local data_ = {selectionBox:gettext(), selectionBox2:gettext()}
+        file:RecordData(data_); ScreenChange(5)
+    end
+    button2.onclick = function () ScreenChange(2) end
+    button5.onclick = function () button2:enabled(false) end
 
     return {button1, button2}, {selectionBox, selectionBox2,button5}
 end
@@ -68,13 +80,11 @@ end
 function ScreeOrbital()
     local button1 = Ui.Button.create("Iniciar")
     button1:setstyle{backgroundcolor = "#1B4BEF"}
-    button1.onclick = function () ScreenChange(5) end
+
     local button2 = Ui.Button.create("voltar")
-    button2.onclick = function () ScreenChange(2) end
 
     local button5 = Ui.Button.create("voltar")
     button5.onclick = function () button2:enabled(false) end
-    button5:setstyle{margintop = "20"}
 
     local selectionBox = Ui.ComboBox.create()
     for i, v in pairs({"Equatorial", "Polar", "Rev_Equarorial", "Rev_Polar"}) do selectionBox:additem(v) end
@@ -83,6 +93,13 @@ function ScreeOrbital()
     local selectionBox2 = Ui.ComboBox.create()
     selectionBox2:setstyle{margintop = "20"}
     for i = 0, 80 do selectionBox2:additem(tostring(70000 + 1000 * i)) end
+
+    button1.onclick = function ()
+        local data_ = {selectionBox:gettext(), selectionBox2:gettext()}
+        file:RecordData(data_) ScreenChange(5) 
+    end
+    button2.onclick = function () ScreenChange(2) end
+    button5:setstyle{margintop = "20"}
 
     return {button1, button2}, {selectionBox, selectionBox2,button5}
 end
@@ -100,6 +117,7 @@ end
 
 function UpdateDisplay ()
     Label:settext(file:Read())
+    Subbox2:schedulepaint()
 end
 
 function Loop()
