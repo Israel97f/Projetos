@@ -63,18 +63,19 @@ function ScreeSubOrbital()
     for i, v in pairs({"Equatorial", "Polar", "Rev_Equarorial", "Rev_Polar"}) do selectionBox:additem(v) end
     selectionBox:setstyle{margintop = "20"}
 
-    local selectionBox2 = Ui.ComboBox.create()
-    selectionBox2:setstyle{margintop = "20"}
-    for i = 0, 80 do selectionBox2:additem(tostring(70000 + 1000 * i)) end
+    local selectionBox2 = Ui.Button.create{"SAS", "checkbox"}
+    selectionBox2:setstyle{width = "30", height = "30", margintop = "10", style = "thick-square"}
 
     button1.onclick = function ()
-        local data_ = {selectionBox:gettext(), selectionBox2:gettext()}
-        file:RecordData(data_); ScreenChange(5)
+        local data_ = {"SubOrbital", selectionBox:gettext(), selectionBox2:ischecked()}
+        file:RecordData(data_); os.execute("python ControladorPython/iniciar.py")
+        ScreenChange(5)
     end
     button2.onclick = function () ScreenChange(2) end
     button5.onclick = function () button2:enabled(false) end
+    selectionBox2.onclick = function ()  file:Write(tostring(selectionBox2:ischecked()))  end
 
-    return {button1, button2}, {selectionBox, selectionBox2,button5}
+    return {button1, button2}, {selectionBox, selectionBox2, button5}
 end
 
 function ScreeOrbital()
@@ -95,8 +96,9 @@ function ScreeOrbital()
     for i = 0, 80 do selectionBox2:additem(tostring(70000 + 1000 * i)) end
 
     button1.onclick = function ()
-        local data_ = {selectionBox:gettext(), selectionBox2:gettext()}
-        file:RecordData(data_) ScreenChange(5) 
+        local data_ = {"Orbital", selectionBox:gettext(), selectionBox2:gettext()}
+        file:RecordData(data_); os.execute("python ControladorPython/iniciar.py")
+        ScreenChange(5) 
     end
     button2.onclick = function () ScreenChange(2) end
     button5:setstyle{margintop = "20"}
