@@ -56,15 +56,34 @@ function ScreeSubOrbital()
 
     local button2 = Ui.Button.create("voltar")
 
-    local button5 = Ui.Button.create("voltar")
-    button5:setstyle{margintop = "20"}
-
     local selectionBox = Ui.ComboBox.create()
     for i, v in pairs({"Equatorial", "Polar", "Rev_Equarorial", "Rev_Polar"}) do selectionBox:additem(v) end
     selectionBox:setstyle{margintop = "20"}
 
     local selectionBox2 = Ui.Button.create{"SAS", "checkbox"}
-    selectionBox2:setstyle{width = "30", height = "30", margintop = "10", style = "thick-square"}
+    selectionBox2:setstyle{width = "30", height = "30", backgroundcolor = "#3B3B3B"}
+
+    local label = Ui.Label.create("SAS")
+    label:setstyle{color = "#ffffff", height = 25}
+    local box = Ui.Container.create()
+    box:setstyle{
+        width = 50,
+        height = 70,
+        margintop = "10",
+        backgroundcolor = "#3B3B3B",
+        padding = "5",
+        justifyContent = 'center',
+        alignItems ='center',
+    }
+
+    local imagenTrue = Ui.Image.createfrompath("UILua/imagens/checkboxTrue@3x.png")
+    local imagenFalse = Ui.Image.createfrompath("UILua/imagens/checkboxFalse@3x.png")
+
+    selectionBox2:setimage(imagenFalse)
+    selectionBox2:setchecked(false)
+
+    box:addchildview(label)
+    box:addchildview(selectionBox2)
 
     button1.onclick = function ()
         local data_ = {"SubOrbital", selectionBox:gettext(), selectionBox2:ischecked()}
@@ -72,10 +91,18 @@ function ScreeSubOrbital()
         ScreenChange(5)
     end
     button2.onclick = function () ScreenChange(2) end
-    button5.onclick = function () button2:enabled(false) end
-    selectionBox2.onclick = function ()  file:Write(tostring(selectionBox2:ischecked()))  end
 
-    return {button1, button2}, {selectionBox, selectionBox2, button5}
+    selectionBox2.onclick = function ()
+        selectionBox2:setchecked(not selectionBox2:ischecked())
+        if selectionBox2:ischecked() then
+            selectionBox2:setimage(imagenTrue)
+        else
+            selectionBox2:setimage(imagenFalse)
+        end
+        file:Write(tostring(selectionBox2:ischecked())) 
+    end
+
+    return {button1, button2}, {selectionBox, box}
 end
 
 function ScreeOrbital()
