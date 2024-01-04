@@ -1,1 +1,1 @@
-SubOrbital, Rev_Polar, true, 
+SubOrbital, Rev_Equarorial, true, 

@@ -1,5 +1,5 @@
 --
-package.cpath = "yueLua54/win64/?.dll"
+package.cpath = "UILua/yueLua54/win64/yue.dll"
 local gui = require('yue.gui')
 
 -- Create window.

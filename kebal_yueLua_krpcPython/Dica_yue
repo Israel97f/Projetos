@@ -1,0 +1,4 @@
+Para o yue funcionar você deve executar o .wlua apartir da pasta raiz do projeto 
+
+ex:
+    wlua54 testes\teste.wlua
