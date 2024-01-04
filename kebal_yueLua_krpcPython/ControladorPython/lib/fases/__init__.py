@@ -1,6 +1,6 @@
 import math 
 import krpc
-from time import sleep
+from time import sleep, time
 
 
 stage = int()
@@ -112,8 +112,8 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
         speed_orbit = math.sqrt(gravitational_parameter/(equatorial_radius + alt))
         time_burn = (speed_orbit - Speed_orbit()) / (max_thrust() / mass()) 
 
-        frac = (- ((altitude() /45000)** 2) + (2 * altitude() /45000))
-        if frac > 1 or frac < 0 or altitude() > 45000:
+        frac = (- ((altitude() /alt)** 2) + (2 * altitude() /alt))
+        if frac > 1 or frac < 0 or altitude() > alt:
             frac = 1
         
         vessel.auto_pilot.target_pitch_and_heading(90 - int(90 * frac), dir)
@@ -174,17 +174,18 @@ def verticalLanding():
     vessel.control.throttle = 0
     
     while True:
+        printf('part 1 : ' + f"{Speed()} : " + f'{surface_altitude()}')
         
         if vertical_speed() < 0:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
  
             try:
-                d1 = distance_burning(Speed() - 25) + 0.8 * Speed() 
+                d1 = distance_burning(Speed() - 25) + 1.7 * Speed() 
                 d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
             except:
                 d1 = 1000
                 d2 = 500
-                print(f'=============//============//================//===================//==============')
+                
             
             if surface_altitude() <= d1 + d2 and d1 < 6000:                
                 vessel.control.throttle = 1
@@ -200,6 +201,7 @@ def verticalLanding():
 
 
     while True:
+        printf("part 2" + f"{Speed()}")
         try:
             d2 = (25 ** 2 - 25) / (2 * 4.9)
         except:
@@ -401,39 +403,23 @@ def distance_burning(dv=0.0):
     global max_thrust
     
 
-    k = max_thrust() / (specific_impulse * 5 * 9.8)
+    k = max_thrust() / (specific_impulse * 9.8)
 
-    speed_variation = dv + abs(math.sqrt(2 * surface_gravity * surface_altitude()))
-    burning_time = (1 - 1 / math.e ** (speed_variation / (specific_impulse * 5 * 9.8 ) ) ) * mass() / k
+    speed_variation = dv #+ abs(math.sqrt(2 * surface_gravity * surface_altitude())) fator de correção ?
+    burning_time = (1 - 1 / math.e ** (speed_variation / (specific_impulse * 9.8 ) ) ) * mass() / k
     acceleration = speed_variation / burning_time
 
     distance = (Speed() ** 2 - 25) / (2 * acceleration) * math.sin(math.atan(- vertical_speed() / horizontal_speed()))
 
-    print(max_thrust()/mass())
-    print(acceleration)
-    print(distance)
-    print('========//===========//========')
-
-
     return distance
 
 
-def test(altt=0):
-    global specific_impulse
-    global vessel
-    a = specific_impulse
-    b = vessel.parts.engines
-    k = 0
-    for c in b:
-        if c.active:
-            k += c.max_thrust / (5 * c.specific_impulse * 9.8)
-            print(f'{c.max_thrust} -- {c.specific_impulse}')
+tempo_inicial = time()
 
-    print(max_thrust())
+def printf(str=''):
+    global tempo_inicial
 
-    print(mass())
-
-    print(k)
-    print(a)
-    print(b)
-    
+    tempo_atual = time()
+    if tempo_atual - tempo_inicial > 1:
+        print(str)
+        tempo_inicial = tempo_atual

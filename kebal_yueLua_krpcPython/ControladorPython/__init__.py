@@ -4,6 +4,7 @@ import ControladorPython.lib.fases as krpc
 import gerenciador_tmp.temporary_file_manager as file
 
 def LaunchOrbital (alt, type, dir):
+    krpc.Lauch(5000)
     krpc.Orbitador(alt, type, dir)
 
 def LaunchSubOrbital (alt, sas):
@@ -33,3 +34,7 @@ elif data[1] == 0:
     pass
 else:
     pass
+
+def test ():
+    krpc.test()
+    
