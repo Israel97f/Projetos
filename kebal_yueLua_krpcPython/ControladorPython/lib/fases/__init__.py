@@ -124,7 +124,7 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
         if apoastro() > alt:
             vessel.control.throttle = 0
 
-        if Speed_orbit() > 2000 and first_stage == 0 and altitude() > 45000:
+        if Speed_orbit() > 2000 and first_stage == 0 and altitude() > alt / 2:
             vessel.control.throttle = 0
             sleep(0.1)
             vessel.control.activate_next_stage()
@@ -168,19 +168,19 @@ def verticalLanding():
     global max_thrust
 
 
-    vessel.control.throttle = 1
+    vessel.control.toggle_action_group(1)
+    vessel.control.throttle = 0
     sleep(1)
     vessel.auto_pilot.sas = True    
     vessel.control.throttle = 0
     
-    while True:
-        printf('part 1 : ' + f"{Speed()} : " + f'{surface_altitude()}')
-        
-        if vertical_speed() < 0:
+    while True:        
+        if vertical_speed() < 0 and surface_altitude() < 8000:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
+            #distance_burning(Speed() - 25)
  
             try:
-                d1 = distance_burning(Speed() - 25) + 1.7 * Speed() 
+                d1 = distance_burning(Speed()) + 0.1 * Speed() 
                 d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
             except:
                 d1 = 1000
@@ -195,7 +195,7 @@ def verticalLanding():
 
             if Speed() <= 25:
                 break
-
+            printf('part 1 : ')
         sleep(0.1)
         atualiza_display()
 
@@ -203,13 +203,17 @@ def verticalLanding():
     while True:
         printf("part 2" + f"{Speed()}")
         try:
-            d2 = (25 ** 2 - 25) / (2 * 4.9)
+            d2 = (25 ** 2 - 25) / (2 * 4.9) + 30
         except:
             d2 = 150
-    
-        if surface_altitude() < d2 or Speed() < 25:
+
+        if surface_altitude() < d2: # or Speed() < 25:
             vessel.control.throttle = (4.9 / surface_gravity + 1) * surface_gravity * mass() / max_thrust()
-            
+        else:
+            if Speed() > 25: # or Speed() < 25:
+                vessel.control.throttle = 1.2 * surface_gravity * mass() / max_thrust()
+            else:
+                vessel.control.throttle = 0.9 * surface_gravity * mass() / max_thrust()   
 
         if Speed() < 5:
             pouso()
@@ -330,7 +334,7 @@ def __telemetry():
     surface_gravity = vessel.orbit.body.surface_gravity
     gravitational_parameter = vessel.orbit.body.gravitational_parameter
     equatorial_radius = vessel.orbit.body.equatorial_radius
-    specific_impulse = vessel.specific_impulse
+    #specific_impulse = vessel.specific_impulse
 
     apoastro = __addStream(vessel.orbit, 'apoapsis_altitude')
     periastro = __addStream(vessel.orbit, 'periapsis_altitude')
@@ -343,6 +347,7 @@ def __telemetry():
     horizontal_speed = __addStream(vessel.flight(veloref), 'horizontal_speed')
     mass = __addStream(vessel, 'mass')
     max_thrust = __addStream(vessel, 'max_thrust') 
+    specific_impulse = __addStream(vessel, 'specific_impulse')
 
 
     dir_retrograde = __addStream(vessel.flight(veloref), 'retrograde')
@@ -402,14 +407,17 @@ def distance_burning(dv=0.0):
     global vertical_speed
     global max_thrust
     
+    #constant = surface_gravity
+    exhaustSpeed = specific_impulse() * 9,80665 # (specific_impulse * 9.8) é a velocidade de exaustão dos gases
+    k = max_thrust() / (exhaustSpeed) 
 
-    k = max_thrust() / (specific_impulse * 9.8)
-
-    speed_variation = dv #+ abs(math.sqrt(2 * surface_gravity * surface_altitude())) fator de correção ?
-    burning_time = (1 - 1 / math.e ** (speed_variation / (specific_impulse * 9.8 ) ) ) * mass() / k
+    speed_variation = dv - 25
+    burning_time = (1 - (1 / (math.e ** (speed_variation / (exhaustSpeed))))) * mass() / k
     acceleration = speed_variation / burning_time
 
-    distance = (Speed() ** 2 - 25) / (2 * acceleration) * math.sin(math.atan(- vertical_speed() / horizontal_speed()))
+    distance = (dv ** 2 - 25) / (2 * acceleration) * math.sin(math.atan(- vertical_speed() / horizontal_speed()))
+
+    printf(f'{burning_time}--' + + f' Ve: {dv} ' + f'd: {distance}--' + f'{acceleration}--' + f'{max_thrust()}--' + f'{mass()}')
 
     return distance
 
@@ -423,3 +431,12 @@ def printf(str=''):
     if tempo_atual - tempo_inicial > 1:
         print(str)
         tempo_inicial = tempo_atual
+
+def test ():
+    print(distance_burning(500))
+    print(max_thrust())
+    print(specific_impulse())
+    #vessel.control.toggle_action_group(1)
+    #distance_burning(200)
+    pass
+
