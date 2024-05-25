@@ -1,6 +1,7 @@
 import math 
 import krpc
 from time import sleep, time
+import gerenciador_tmp.temporary_file_manager as file_
 
 
 stage = int()
@@ -134,11 +135,11 @@ def Orbitador(alt=70000, type='Equatorial', dir=90):
 
         if (time_burn / 2) <= time_to_apoapsis() and (alt - altitude()) < 4000:
             vessel.auto_pilot.target_pitch_and_heading( 0, dir)
-            vessel.control.throttle = 1
+            vessel.control.throttle = 0
             break
         atualiza_display()
         
-    while True:
+    while False :
         __fuel_chek()
         
         if Speed_orbit() > 2000 and first_stage == 0:
@@ -167,48 +168,57 @@ def verticalLanding():
     global mass
     global max_thrust
 
-
+    has_atmosphere = vessel.orbit.body.has_atmosphere
     vessel.control.toggle_action_group(1)
     vessel.control.throttle = 0
     sleep(1)
     vessel.auto_pilot.sas = True    
     vessel.control.throttle = 0
     
+    d1 = 0
+    d2 = 0
+
     while True:        
-        if vertical_speed() < 0 and surface_altitude() < 8000:
+        if vertical_speed() < -0.5 and surface_altitude() < 35000:
             vessel.auto_pilot.sas_mode = vessel.auto_pilot.sas_mode.retrograde 
-            #distance_burning(Speed() - 25)
- 
-            try:
-                d1 = distance_burning(Speed()) + 0.1 * Speed() 
-                d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
-            except:
-                d1 = 1000
-                d2 = 500
                 
-            
-            if surface_altitude() <= d1 + d2 and d1 < 6000:                
-                vessel.control.throttle = 1
+            if d1 and surface_altitude() <= d1 + d2:
+                if has_atmosphere:  
+                    if d1 <= 6000:              
+                        vessel.control.throttle = mass() / initial_mass
+                        if Speed() <= 25:
+                            break
+                else:
+                    vessel.control.throttle = mass() / initial_mass
+                    if Speed() <= 25:
+                        break
+
+            else:
+                try:
+                    d1, initial_mass = distance_burning(Speed())
+                    d1 = d1 + 1.7 * Speed() 
+                    d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ))
+                except:
+                    d1 = 1000
+                    d2 = 500
 
             if surface_altitude() < 100:
                 vessel.control.gear = True
 
-            if Speed() <= 25:
-                break
-            printf('part 1 : ')
-        sleep(0.1)
+            printf(f'part 1 : distamcia {d1}')
+        sleep(0.03)
         atualiza_display()
 
 
     while True:
         printf("part 2" + f"{Speed()}")
         try:
-            d2 = (25 ** 2 - 25) / (2 * 4.9) + 30
+            d2 = (25 ** 2 - 25) / (2 * 4.9) + 50
         except:
             d2 = 150
 
         if surface_altitude() < d2: # or Speed() < 25:
-            vessel.control.throttle = (4.9 / surface_gravity + 1) * surface_gravity * mass() / max_thrust()
+            vessel.control.throttle = (4.9 + 0.8 + surface_gravity) * mass() / max_thrust()
         else:
             if Speed() > 25: # or Speed() < 25:
                 vessel.control.throttle = 1.2 * surface_gravity * mass() / max_thrust()
@@ -408,28 +418,39 @@ def distance_burning(dv=0.0):
     global max_thrust
     
     #constant = surface_gravity
-    exhaustSpeed = specific_impulse() * 9,80665 # (specific_impulse * 9.8) é a velocidade de exaustão dos gases
+    exhaustSpeed = specific_impulse() * 9.80665 # (specific_impulse * 9.8) é a velocidade de exaustão dos gases
     k = max_thrust() / (exhaustSpeed) 
 
     speed_variation = dv - 25
     burning_time = (1 - (1 / (math.e ** (speed_variation / (exhaustSpeed))))) * mass() / k
-    acceleration = speed_variation / burning_time
 
-    distance = (dv ** 2 - 25) / (2 * acceleration) * math.sin(math.atan(- vertical_speed() / horizontal_speed()))
+    vp = math.sin(math.atan(- vertical_speed() / horizontal_speed()))
 
-    printf(f'{burning_time}--' + + f' Ve: {dv} ' + f'd: {distance}--' + f'{acceleration}--' + f'{max_thrust()}--' + f'{mass()}')
+    acceleration = ( max_thrust() / mass()) - surface_gravity * vp #/ (speed_variation / burning_time)
 
-    return distance
+    distance = (dv ** 2 - 25) / (2 * acceleration) * vp #math.sin(math.atan(- vertical_speed() / horizontal_speed()))
+
+    #debug
+    global cont
+    printf(f'{cont:.2f}\n' + f'{"ve":<5} {dv:10.2f}\n' + f'{"d":<5} {distance:10.2f} ')
+
+    # causador de bugs ?
+    #printf(f'{burning_time}\n' + f' Ve: {dv:.2f} ' + f'd: {distance:.2f}--' + f'{acceleration:.2f}--' + f'{max_thrust():.2f}--' + f'{mass():.2f}' + f'{vp:.2f}')
+
+    return distance, mass()
 
 
 tempo_inicial = time()
-
+cont = 0 # tempo de execução em s para debug
 def printf(str=''):
     global tempo_inicial
+    global cont
 
     tempo_atual = time()
-    if tempo_atual - tempo_inicial > 1:
-        print(str)
+    if tempo_atual - tempo_inicial > 0.1:
+        cont = cont + 1
+        print(str)  # causador de bugs ?
+        file_.Write(str)
         tempo_inicial = tempo_atual
 
 def test ():

@@ -1,2 +1,3 @@
-if 1 then end
+print('oi')
+a = io.read()
 

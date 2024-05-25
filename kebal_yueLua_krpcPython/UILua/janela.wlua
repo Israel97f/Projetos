@@ -19,7 +19,7 @@ function ScreeInicial()
         local path = "UILua/imagens/but2.png"
         local imagen = Ui.Image.createfrompath(path)
         button1:setimage(imagen)
-        Ui.MessageLoop.postdelayedtask(100, function() ScreenChange(2) end)
+        Ui.MessageLoop.postdelayedtask(100, function() ScreenChange(2);  end)
     end
 
     return {button1}, {label}
@@ -42,9 +42,9 @@ function ScreeMode()
     label:setstyle{backgroundcolor = "#FFFFFF"}
     label:settext("rabo de cavalo")
 
-    button1.onclick = function () ScreenChange(3) end
+    button1.onclick = function () ScreenChange(3); end
     button2.onclick = function () ScreenChange(4) end
-    button3.onclick = function () ScreenChange(5) end
+    button3.onclick = function () ScreenChange(5); tmp = assert( io.popen("python pouso.py", "w") ); end -- "w" para evitar bufer overflow
     button4.onclick = function () ScreenChange(1) end
 
     return {button1, button2, button3, button4}, {label}
@@ -87,7 +87,7 @@ function ScreeSubOrbital()
 
     button1.onclick = function ()
         local data_ = {"SubOrbital", selectionBox:gettext(), selectionBox2:ischecked()}
-        file:RecordData(data_); os.execute("python ControladorPython/iniciar.py")
+        file:RecordData(data_); tmp2 = assert( io.popen("python subOrb.py") )
         ScreenChange(5)
     end
     button2.onclick = function () ScreenChange(2) end
@@ -124,7 +124,7 @@ function ScreeOrbital()
 
     button1.onclick = function ()
         local data_ = {"Orbital", selectionBox:gettext(), selectionBox2:gettext()}
-        file:RecordData(data_); os.execute("python ControladorPython/iniciar.py")
+        file:RecordData(data_); tmp3 = assert( io.popen("python lançar.py") )
         ScreenChange(5) 
     end
     button2.onclick = function () ScreenChange(2) end
@@ -140,6 +140,7 @@ function ScreenDisplay ()
     Label:setstyle{color = "#FFFFFF", backgroundcolor = "#0F0F0F"}
     Label:settext(file:Read())
     Label:setfont(font)
+    button1.onclick = function () ScreenChange(1); assert( os.execute('python abortar.py')); tmp:close() end
     Loop()
     return {button1}, {Label}
 end
@@ -151,6 +152,10 @@ end
 
 function Loop()
     UpdateDisplay()
+    check, erro = pcall(CleanBuffer)
+    if not check then
+        file:Write(erro)
+    end
     Ui.MessageLoop.postdelayedtask( 33,function () Loop() end)
 end
 
@@ -184,6 +189,11 @@ function RefreshScreen()
         Subbox2:addchildviewat(v, i)
         Subbox2:schedulepaint()
     end
+end
+
+function CleanBuffer()
+    --tmp:flush()
+    --local dados = tmp:read("l")
 end
 
 -- cria uma janela

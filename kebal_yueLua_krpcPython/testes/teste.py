@@ -1,12 +1,16 @@
-import sys
+def fun ():
+    return 3, 4
 
-sys.path.append("")
+a = 0
+b = 5
 
-from gerenciador_tmp.temporary_file_manager import ReadData
 
-def Mult (arc1, arc2):
-    return arc1 * arc2
+if a or a > 6:
+    print("ok11")
 
-arc = ReadData()
+a = 1
 
-print(Mult(arc[0], arc[1]))
+
+
+if a and  b < 6:
+    print("ok12")

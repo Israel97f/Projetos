@@ -24,17 +24,20 @@ def Conect ():
 def Desconect ():
     krpc.Disconect()
 
-data = file.ReadData()
+try:
+    data = file.ReadData()
 
-if data[1] == "Orbital":
-    LaunchSubOrbital(data[3], data[2])
-elif data[1] == "SubOrbital":
-    LaunchSubOrbital(data[3], data[2])
-elif data[1] == 0:
-    pass
-else:
+    if data[1] == "Orbital":
+        LaunchSubOrbital(data[3], data[2])
+    elif data[1] == "SubOrbital":
+        LaunchSubOrbital(data[3], data[2])
+    elif data[1] == 0:
+        pass
+    else:
+        pass
+except:
     pass
 
-def test ():
+def test ():         
     krpc.test()
     
