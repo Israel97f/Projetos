@@ -73,7 +73,7 @@ function Permutations (table)
     return out
 end
 
-A = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
+A = {"a", "b", "c", "d"}--, "e", "f", "g"}
 
 -- imprime o retorno da função Permutations
 for index, value in ipairs(Permutations(A)) do
