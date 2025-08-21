@@ -1,1 +1,1 @@
-part 25.1292003226008935
+SubOrbital, Equatorial, true, 
