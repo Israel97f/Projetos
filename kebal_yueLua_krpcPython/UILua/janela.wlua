@@ -1,5 +1,8 @@
 -- IIIIIIIIIII --
-package.cpath = "UILua/yueLua54/win64/?.dll"
+package.cpath = os.getenv("OS") and "UILua/yueLua54/win64/?.dll" or
+"UILua/yueLua54/linux/?.so"
+
+
 local Ui = require "yue.gui"
 local file = require "gerenciador_tmp/temporary_file_manager"
 
