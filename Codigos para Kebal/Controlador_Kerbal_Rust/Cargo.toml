@@ -1,0 +1,9 @@
+[package]
+name = "meu_ksp_cliente"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+krpc-client = { git = "https://github.com/kladd/krpc-client", features = ["tokio"] }
+tokio = { version = "1", features = ["full"] }
