@@ -121,7 +121,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     loop {
-        let mut direção = 0.0;
+        let mut direção = -0.5;
         if telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet * 1.015 {
             direção = -5.0; // Diminuir apoastro
         } else if telemetria.apoastro.get().await.unwrap_or(0.0) < _height_taguet * 0.985 {
