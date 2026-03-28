@@ -1,0 +1,305 @@
+use krpc_client::Client;
+use krpc_client::services::space_center::SpaceCenter;
+use krpc_client::stream::Stream;
+use std::sync::Arc;
+
+struct Telemetria {
+    altitude: Stream<f64>,
+    massa: Stream<f32>,
+    gravidade_superficial: f64,
+    apoastro: Stream<f64>,
+    trust_maximo: Stream<f32>,
+    parametro_gravitacional: f64,
+    raio_equatorial: f64,
+    velocidade_orbital: Stream<f64>,
+    tempo_para_apoastro: Stream<f64>,
+    altitude_nivel_mar: Stream<f64>,
+    periastro: Stream<f64>,
+    velocidade_vertical: Stream<f64>,
+    velocidade_horizontal: Stream<f64>,
+    velocidade: Stream<f64>,
+    impulso_especifico: Stream<f32>,
+}
+
+pub async fn inicia_comunicacao() -> Result< Arc<Client>, Box<dyn std::error::Error>> {
+    // Conectar ao servidor kRPC
+    let client = Client::new("Launch Script", "127.0.0.1", 50000, 50001).await?;
+    Ok(client)  
+}
+
+
+pub async fn lancamto_basico (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
+    let space_center = SpaceCenter::new(client);
+    let vessel = space_center.get_active_vessel().await?;
+    let telemetria = telemetria(&vessel).await?;
+
+    let control = vessel.get_control().await?;
+    control.set_throttle(1.0).await?;
+    control.set_sas(true).await?;
+
+    println!("iniciando lançamento...");
+    for s in 0..10 {
+        println!("Lançamento em: {} segundos", 10 -s);
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    let auto_pilot = vessel.get_auto_pilot().await?;
+    auto_pilot.engage().await?;
+    control.activate_next_stage().await?;
+
+    loop {
+        let apoastro = telemetria.apoastro.get().await.unwrap_or(0.0);
+        if apoastro > 10_000.0 {
+            println!("Atingiu {} km de altitude! Cortando motores...", apoastro / 1000.0);
+            break;
+        }
+    }
+    Ok(())
+}
+
+
+pub async fn orbitador (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
+    let space_center = SpaceCenter::new(client);
+    let vessel = space_center.get_active_vessel().await?;
+    let auto_pilot = vessel.get_auto_pilot().await?;
+    let telemetria = telemetria(&vessel).await?;
+
+    let control = vessel.get_control().await?;
+    control.set_throttle(1.0).await?;
+    control.set_sas(true).await?;
+
+    // iniciando protocolo de órbita
+    let _height_taguet = 100_000.0; // Altitude alvo para órbita (100 km)
+
+    let valor_de_throttle = 
+    telemetria.massa.get().await.unwrap_or(0.0) * (telemetria.gravidade_superficial as f32) * 1.5 /
+    telemetria.trust_maximo.get().await.unwrap_or(1.0);
+
+    control.set_throttle(valor_de_throttle).await?;
+    control.set_sas(false).await?;
+    auto_pilot.engage().await?;
+    auto_pilot.target_pitch_and_heading(90.0, 90.0).await?;
+
+    loop {
+        let mut curva = ((_height_taguet - telemetria.altitude.get().await.unwrap_or(0.0)) / _height_taguet) as f32;
+
+        if curva < 0.0 {
+            curva = 0.0
+        }
+
+        auto_pilot.target_pitch_and_heading(90.0 * curva, 90.0).await?;
+
+        if telemetria.apoastro.get().await? >= _height_taguet {
+            break;
+        }
+        print!("\x1B[2J\x1B[H"); // Limpa a tela e move o cursoR para o início
+        println!("tempo para apoastro: {:.2} s", telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0));
+    }
+
+    loop {
+        let orbital_speed_taguet = (telemetria.parametro_gravitacional / (telemetria.raio_equatorial + _height_taguet)).sqrt();
+        let time_burn = (orbital_speed_taguet - telemetria.velocidade_orbital.get().await.unwrap_or(0.0)) / 
+        ((telemetria.trust_maximo.get().await.unwrap_or(0.0) / telemetria.massa.get().await.unwrap_or(1.0)) as f64);
+
+        let proximidade_alvo = _height_taguet * (((_height_taguet - telemetria.altitude.get().await.unwrap_or(0.0)) 
+        / _height_taguet).clamp(0.0, 1.0));
+
+        let mut curva = _height_taguet * proximidade_alvo / 
+        ((_height_taguet * 0.8).powi(2) * (1.0 - ((proximidade_alvo) / (_height_taguet * 0.8)).powi(2)).sqrt());
+
+        if curva > 80.0 {
+            curva = 80.0; // Inicia com uma inclinação mais agressiva
+        }
+        
+        auto_pilot.target_pitch_and_heading(curva as f32, 90.0).await?;
+
+        if _height_taguet > telemetria.apoastro.get().await.unwrap_or(0.0) &&
+        telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet * 0.9 {
+
+            let throttle_slow = telemetria.massa.get().await.unwrap_or(0.0) * (telemetria.gravidade_superficial as f32) * 1.2 /
+            telemetria.trust_maximo.get().await.unwrap_or(1.0);
+
+            control.set_throttle(throttle_slow).await?;
+        } else if telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet {
+            control.set_throttle(0.0).await?;
+        }
+
+        if time_burn / 2.0 < telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0) &&
+        _height_taguet - telemetria.altitude_nivel_mar.get().await.unwrap_or(0.0) < 4_000.0 {
+            println!("Iniciando queima de inserção orbital...");
+            control.set_throttle(1.0).await?;
+            break;
+        }
+
+        print_telemetria(&telemetria).await;
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    }
+
+    loop {
+        let mut direção = -0.5;
+        if telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet * 1.015 {
+            direção = -5.0; // Diminuir apoastro
+        } else if telemetria.apoastro.get().await.unwrap_or(0.0) < _height_taguet * 0.985 {
+            direção = 5.0; // Aumentar apoastro
+        }
+
+        auto_pilot.target_pitch_and_heading(direção, 90.0).await?;
+        if (telemetria.apoastro.get().await.unwrap_or(0.0) - telemetria.periastro.get().await.unwrap_or(0.0)).abs() < 2_000.0
+        || telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet * 1.30 {
+            println!("Órbita estabilizada!");
+            control.set_throttle(0.0).await?;
+            auto_pilot.disengage().await?;
+            break;
+        }
+        
+        print_telemetria(&telemetria).await?;
+    }
+
+    Ok(())
+}
+
+
+
+async fn aterricador (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
+    let space_center = SpaceCenter::new(client);
+    let vessel = space_center.get_active_vessel().await?;
+    let auto_pilot = vessel.get_auto_pilot().await?;
+
+    let telemetria = telemetria(&vessel).await?;
+
+    let tem_atimosfera = vessel.get_orbit().await?.get_body().await?.get_has_atmosphere().await?;
+    vessel.get_control().await?.toggle_action_group(1).await?;
+    vessel.get_control().await?.set_throttle(1.0).await?;
+    vessel.get_auto_pilot().await?.engage().await?;
+
+    let mut d1 = 0.0;
+    let mut d2 = 0.0;
+
+    loop{
+        if telemetria.velocidade_vertical.get().await.unwrap_or(0.0) < -0.5 &&
+        telemetria.altitude.get().await.unwrap_or(0.0) < 35_000.0 {
+            auto_pilot.set_sas_mode(krpc_client::services::space_center::SASMode::Retrograde).await?;
+
+            if d1  && telemetria.altitude.get().await.unwrap_or(0.0) < d1 + d2 {
+                if tem_atimosfera {
+                    if d1 < 6_000.0 {
+                        let throttle = telemetria.massa.get().await.unwrap_or(0.0);
+                        control.set_throttle(throttle).await?;
+
+                        if telemetria.velocidade.get().await.unwrap_or(0.0) < 25.0 {
+                            break;
+                        }
+                } else {
+                    let throttle = telemetria.massa.get().await.unwrap_or(0.0);
+                    control.set_throttle(throttle).await?;
+
+                    if telemetria.velocidade.get().await.unwrap_or(0.0) < 25.0 {
+                        break;
+                    }
+                }
+            } else {
+
+                d1, initial_mass = distancia_de_queima(telemetria.velocidade.get().await.unwrap_or(0.0));
+                d1 = d1 + 1.7 * telemetria.velocidade.get().await.unwrap_or(0.0);
+                d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ));
+
+            }
+        }
+    }
+}
+
+
+async fn distancia_de_queima(dv: f64) -> (f64, f64) {
+    let specific_impulse = telemetria.impulso_especifico.get().await.unwrap_or(0.0);
+    let surface_gravity = telemetria.gravidade_superficial as f32;
+    let surface_altitude = telemetria.altitude.get().await.unwrap_or(0.0);
+    let mass = telemetria.massa.get().await.unwrap_or(0.0);
+    let speed = telemetria.velocidade.get().await.unwrap_or(0.0);
+    let horizontal_speed = telemetria.velocidade_horizontal.get().await.unwrap_or(0.0);
+    let vertical_speed = telemetria.velocidade_vertical.get().await.unwrap_or(0.0);
+    let max_thrust = telemetria.trust_maximo.get().await.unwrap_or(0.0);
+
+    exhaustSpeed = specific_impulse() * 9.80665; // (specific_impulse * 9.8) é a velocidade de exaustão dos gases
+    k = max_thrust() / (exhaustSpeed); 
+
+    speed_variation = dv - 25;
+    burning_time = (1 - (1 / (math.e ** (speed_variation / (exhaustSpeed))))) * mass() / k;
+
+    let vp = math.sin(math.atan(- vertical_speed() / horizontal_speed()));
+
+    acceleration = ( max_thrust() / mass()) - surface_gravity * vp; /// (speed_variation / burning_time)
+
+    distance = (dv ** 2 - 25) / (2 * acceleration) * vp; //math.sin(math.atan(- vertical_speed() / horizontal_speed()))
+    (distance, mass)
+}
+    
+
+async fn telemetria(vessel: &krpc_client::services::space_center::Vessel) -> Result<Telemetria, Box<dyn std::error::Error>> {
+    // stream de altitude
+    let flight = vessel.flight(None).await?;
+    let orbit = vessel.get_orbit().await?;
+    let body = orbit.get_body().await?;
+    let veloref_flight = body.get_reference_frame().await?;
+    let veloref_orbit = body.get_orbital_reference_frame().await?;
+
+    let gravitational_parameter = body.get_gravitational_parameter().await?;
+    let equatorial_radius = body.get_equatorial_radius().await?;
+    let surface_gravity = body.get_surface_gravity().await?;
+
+    let mass_stream = vessel.get_mass_stream().await?;
+    let max_trust = vessel.get_max_thrust_stream().await?;
+    let altitude_stream = flight.get_mean_altitude_stream().await?;
+    let apoapsis_stream = orbit.get_apoapsis_altitude_stream().await?;
+    let periapsis_stream = orbit.get_periapsis_altitude_stream().await?;
+    let time_apoapsis_stream = orbit.get_time_to_apoapsis_stream().await?;
+    let speed_orbit_stream = vessel.flight(Some(&veloref_orbit)).await?.get_speed_stream().await?;
+    let height_seia_level_stream = vessel.flight(Some(&veloref_flight)).await?.get_mean_altitude_stream().await?;
+    let velocidade_vetical = vessel.flight(Some(&veloref_flight)).await?.get_vertical_speed_stream().await?;
+    let velocidade_horizontal = vessel.flight(Some(&veloref_flight)).await?.get_horizontal_speed_stream().await?;
+    let velocidadde = vessel.flight(Some(&veloref_flight)).await?.get_speed_stream().await?;
+    let impulso_especifico = vessel.get_specific_impulse_stream().await?;
+
+    altitude_stream.set_rate(5.0).await?;
+    mass_stream.set_rate(5.0).await?;
+    apoapsis_stream.set_rate(5.0).await?;
+    periapsis_stream.set_rate(5.0).await?;
+    max_trust.set_rate(5.0).await?;
+    speed_orbit_stream.set_rate(5.0).await?;
+    time_apoapsis_stream.set_rate(5.0).await?;
+    height_seia_level_stream.set_rate(5.0).await?;
+
+
+    // Aguarda um pouco para as streams serem populadas
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+    Ok(Telemetria {
+        altitude: altitude_stream,
+        massa: mass_stream,
+        gravidade_superficial: surface_gravity,
+        apoastro: apoapsis_stream,
+        trust_maximo: max_trust,
+        parametro_gravitacional: gravitational_parameter,  
+        raio_equatorial: equatorial_radius,
+        periastro: periapsis_stream,
+        velocidade_orbital: speed_orbit_stream,
+        tempo_para_apoastro: time_apoapsis_stream,
+        altitude_nivel_mar: height_seia_level_stream,
+        velocidade_vertical: velocidade_vetical,
+        velocidade_horizontal: velocidade_horizontal,
+        velocidade: velocidadde,
+        impulso_especifico: impulso_especifico,
+    })
+}
+
+
+async fn print_telemetria(telemetria: &Telemetria) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Altitude: {:.2} m", telemetria.altitude.get().await.unwrap_or(0.0));
+    println!("Massa: {:.2} kg", telemetria.massa.get().await.unwrap_or(0.0));
+    println!("Gravidade Superficial: {:.2} m/s²", telemetria.gravidade_superficial);
+    println!("Apoastro: {:.2} m", telemetria.apoastro.get().await.unwrap_or(0.0));
+    println!("Periastro: {:.2} m", telemetria.periastro.get().await.unwrap_or(0.0));
+    println!("Velocidade Orbital: {:.2} m/s", telemetria.velocidade_orbital.get().await.unwrap_or(0.0));
+    println!("Tempo para Apoastro: {:.2} s", telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0));
+    println!("Altitude Nível do Mar: {:.2} m", telemetria.altitude_nivel_mar.get().await.unwrap_or(0.0));
+    Ok(())
+}
