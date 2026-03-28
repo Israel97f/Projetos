@@ -218,16 +218,18 @@ async fn distancia_de_queima(dv: f64) -> (f64, f64) {
     let horizontal_speed = telemetria.velocidade_horizontal.get().await.unwrap_or(0.0);
     let vertical_speed = telemetria.velocidade_vertical.get().await.unwrap_or(0.0);
     let max_thrust = telemetria.trust_maximo.get().await.unwrap_or(0.0);
+    
+    let e = std::f64::consts::E;
 
-    exhaustSpeed = specific_impulse() * 9.80665; // (specific_impulse * 9.8) é a velocidade de exaustão dos gases
-    k = max_thrust() / (exhaustSpeed); 
+    exhaustSpeed = specific_impulse * 9.80665; // (specific_impulse * 9.8) é a velocidade de exaustão dos gases
+    k = max_thrust / (exhaustSpeed); 
 
     speed_variation = dv - 25;
-    burning_time = (1 - (1 / (math.e ** (speed_variation / (exhaustSpeed))))) * mass() / k;
+    burning_time = (1 - (1 / (e.powf (speed_variation / (exhaustSpeed))))) * mass / k;
 
-    let vp = math.sin(math.atan(- vertical_speed() / horizontal_speed()));
+    let vp = ((- vertical_speed / horizontal_speed).atan()).sin();
 
-    acceleration = ( max_thrust() / mass()) - surface_gravity * vp; /// (speed_variation / burning_time)
+    acceleration = ( max_thrust / mass - surface_gravity * vp; /// (speed_variation / burning_time)
 
     distance = (dv ** 2 - 25) / (2 * acceleration) * vp; //math.sin(math.atan(- vertical_speed() / horizontal_speed()))
     (distance, mass)
