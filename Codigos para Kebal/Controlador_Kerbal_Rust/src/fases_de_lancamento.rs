@@ -19,26 +19,24 @@ struct Telemetria {
     velocidade_horizontal: Stream<f64>,
     velocidade: Stream<f64>,
     impulso_especifico: Stream<f32>,
+    altitude_superficie: Stream<f64>,
 }
 
-static mut telemetria = Arc::new(Telemetria::new());
 
 pub async fn inicia_comunicacao() -> Result<Arc<Client>, Box<dyn std::error::Error>> {
     // Conectar ao servidor kRPC
     let client = Client::new("Launch Script", "127.0.0.1", 50000, 50001).await?;
-    let space_center = SpaceCenter::new(client.clone());
-    let vessel = space_center.get_active_vessel().await?;
-    telemetria = Arc::new(Telemetria::new(&vessel).await?);
     Ok(client) 
 }
 
 
-pub async fn lancamto_basico (client: Arc<Client>, telemetria: Arc<Telemetria>) 
+pub async fn lancamto_basico (client: Arc<Client>) 
 -> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
-
+    let telemetria = Telemetria::new(&vessel).await?;
     let control = vessel.get_control().await?;
+
     control.set_throttle(1.0).await?;
     control.set_sas(true).await?;
 
@@ -67,6 +65,7 @@ pub async fn orbitador (client: Arc<Client>)
 -> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
+    let telemetria = Telemetria::new(&vessel).await?;
     let auto_pilot = vessel.get_auto_pilot().await?;
 
     let control = vessel.get_control().await?;
@@ -76,9 +75,9 @@ pub async fn orbitador (client: Arc<Client>)
     // iniciando protocolo de órbita
     let _height_taguet = 100_000.0; // Altitude alvo para órbita (100 km)
 
-    let valor_de_throttle = 
-    telemetria.massa.get().await.unwrap_or(0.0) * (telemetria.gravidade_superficial as f32) * 1.5 /
-    telemetria.trust_maximo.get().await.unwrap_or(1.0);
+    let valor_de_throttle: f32 = 
+    telemetria.massa.get().await.unwrap_or(0.0_f32) * (telemetria.gravidade_superficial as f32) * 1.5 /
+    telemetria.trust_maximo.get().await.unwrap_or(1.0_f32);
 
     control.set_throttle(valor_de_throttle).await?;
     control.set_sas(false).await?;
@@ -86,7 +85,7 @@ pub async fn orbitador (client: Arc<Client>)
     auto_pilot.target_pitch_and_heading(90.0, 90.0).await?;
 
     loop {
-        let mut curva = ((_height_taguet - telemetria.altitude.get().await.unwrap_or(0.0)) / _height_taguet) as f32;
+        let mut curva: f32 = ((_height_taguet - telemetria.altitude.get().await.unwrap_or(0.0_f64)) / _height_taguet) as f32;
 
         if curva < 0.0 {
             curva = 0.0
@@ -98,19 +97,19 @@ pub async fn orbitador (client: Arc<Client>)
             break;
         }
         print!("\x1B[2J\x1B[H"); // Limpa a tela e move o cursoR para o início
-        println!("tempo para apoastro: {:.2} s", telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0));
+        println!("tempo para apoastro: {:.2} s", telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0_f64));
     }
 
     loop {
-        let orbital_speed_taguet = (telemetria.parametro_gravitacional / (telemetria.raio_equatorial + _height_taguet)).sqrt();
-        let time_burn = (orbital_speed_taguet - telemetria.velocidade_orbital.get().await.unwrap_or(0.0)) / 
-        ((telemetria.trust_maximo.get().await.unwrap_or(0.0) / telemetria.massa.get().await.unwrap_or(1.0)) as f64);
+        let orbital_speed_taguet: f64 = (telemetria.parametro_gravitacional / (telemetria.raio_equatorial + _height_taguet)).sqrt();
+        let time_burn: f64 = (orbital_speed_taguet - telemetria.velocidade_orbital.get().await.unwrap_or(0.0_f64)) / 
+        ((telemetria.trust_maximo.get().await.unwrap_or(0.0_f32) / telemetria.massa.get().await.unwrap_or(1.0_f32)) as f64);
 
-        let proximidade_alvo = _height_taguet * (((_height_taguet - telemetria.altitude.get().await.unwrap_or(0.0)) 
+        let proximidade_alvo: f64 = _height_taguet * (((_height_taguet - telemetria.altitude.get().await.unwrap_or(0.0_f64)) 
         / _height_taguet).clamp(0.0, 1.0));
 
-        let mut curva = _height_taguet * proximidade_alvo / 
-        ((_height_taguet * 0.8).powi(2) * (1.0 - ((proximidade_alvo) / (_height_taguet * 0.8)).powi(2)).sqrt());
+        let mut curva: f64 = _height_taguet * proximidade_alvo / 
+        ((_height_taguet * 0.8).powf(2.0) * (1.0 - ((proximidade_alvo) / (_height_taguet * 0.8)).powf(2.0)).sqrt());
 
         if curva > 80.0 {
             curva = 80.0; // Inicia com uma inclinação mais agressiva
@@ -118,19 +117,19 @@ pub async fn orbitador (client: Arc<Client>)
         
         auto_pilot.target_pitch_and_heading(curva as f32, 90.0).await?;
 
-        if _height_taguet > telemetria.apoastro.get().await.unwrap_or(0.0) &&
-        telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet * 0.9 {
+        if _height_taguet > telemetria.apoastro.get().await.unwrap_or(0.0_f64) &&
+        telemetria.apoastro.get().await.unwrap_or(0.0_f64) > _height_taguet * 0.9 {
 
-            let throttle_slow = telemetria.massa.get().await.unwrap_or(0.0) * (telemetria.gravidade_superficial as f32) * 1.2 /
-            telemetria.trust_maximo.get().await.unwrap_or(1.0);
+            let throttle_slow: f32 = telemetria.massa.get().await.unwrap_or(0.0_f32) * (telemetria.gravidade_superficial as f32) * 1.2 /
+            telemetria.trust_maximo.get().await.unwrap_or(1.0_f32);
 
             control.set_throttle(throttle_slow).await?;
-        } else if telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet {
+        } else if telemetria.apoastro.get().await.unwrap_or(0.0_f64) > _height_taguet {
             control.set_throttle(0.0).await?;
         }
 
-        if time_burn / 2.0 < telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0) &&
-        _height_taguet - telemetria.altitude_nivel_mar.get().await.unwrap_or(0.0) < 4_000.0 {
+        if time_burn / 2.0 < telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0_f64) &&
+        _height_taguet - telemetria.altitude_nivel_mar.get().await.unwrap_or(0.0_f64) < 4_000.0 {
             println!("Iniciando queima de inserção orbital...");
             control.set_throttle(1.0).await?;
             break;
@@ -142,15 +141,15 @@ pub async fn orbitador (client: Arc<Client>)
 
     loop {
         let mut direção = -0.5;
-        if telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet * 1.015 {
+        if telemetria.apoastro.get().await.unwrap_or(0.0_f64) > _height_taguet * 1.015 {
             direção = -5.0; // Diminuir apoastro
-        } else if telemetria.apoastro.get().await.unwrap_or(0.0) < _height_taguet * 0.985 {
+        } else if telemetria.apoastro.get().await.unwrap_or(0.0_f64) < _height_taguet * 0.985 {
             direção = 5.0; // Aumentar apoastro
         }
 
         auto_pilot.target_pitch_and_heading(direção, 90.0).await?;
-        if (telemetria.apoastro.get().await.unwrap_or(0.0) - telemetria.periastro.get().await.unwrap_or(0.0)).abs() < 2_000.0
-        || telemetria.apoastro.get().await.unwrap_or(0.0) > _height_taguet * 1.30 {
+        if (telemetria.apoastro.get().await.unwrap_or(0.0_f64) - telemetria.periastro.get().await.unwrap_or(0.0_f64)).abs() < 2_000.0
+        || telemetria.apoastro.get().await.unwrap_or(0.0_f64) > _height_taguet * 1.30 {
             println!("Órbita estabilizada!");
             control.set_throttle(0.0).await?;
             auto_pilot.disengage().await?;
@@ -240,19 +239,22 @@ async fn distancia_de_queima(dv: f64) -> (f64, f64) {
     (distance, mass)
 } // */
 
-async fn aterricador (client: Arc<Client>) 
+pub async fn aterricador (client: Arc<Client>) 
 -> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
+    let telemetria = Telemetria::new(&vessel).await?;
     let control = vessel.get_control().await?;
 
     loop{
-        if telemetria.altitude.get().await? <= ditancia_de_queima(5.0, telemetria).await?{
+        println!("Altitude: {:.2} m", telemetria.altitude_superficie.get().await?);
+        if telemetria.altitude_superficie.get().await? <= distancia_de_queima(5.0, &telemetria).await?{
             control.set_throttle(1.0).await?
         
         }
 
         if telemetria.velocidade.get().await? <= 5.0 {
+            pouso(&vessel).await?;
             break;
         }
     }
@@ -261,14 +263,38 @@ async fn aterricador (client: Arc<Client>)
 }
 
 
-async fn ditancia_de_queima (velocidade_final: f64)
+async fn pouso (vessel: &krpc_client::services::space_center::Vessel) -> Result<(), Box<dyn std::error::Error>> {
+    let telemetria = Telemetria::new(&vessel).await?;
+    let control = vessel.get_control().await?;
+    let auto_pilot = vessel.get_auto_pilot().await?;
+
+    auto_pilot.target_pitch_and_heading(90.0, 90.0).await?;
+
+    loop {
+        let throttle = 1.0 * telemetria.massa.get().await? as f64 * telemetria.gravidade_superficial /
+        telemetria.trust_maximo.get().await? as f64;
+        control.set_throttle(throttle as f32).await?;
+
+        if telemetria.altitude_superficie.get().await? < 0.0 {
+            break;
+        }
+    }
+
+    Ok(())
+
+}
+
+
+async fn distancia_de_queima (velocidade_final: f64, telemetria: &Telemetria)
 -> Result<f64, Box<dyn std::error::Error>> {
-    let v_inicial = telemetria.velocidade_vertical.get().await?;
-    let acelerecao = ((telemetria.velocidade_vertical.get().await? / 
-    telemetria.velocidade.get().await?) * (telemetria.trust_maximo.get().await? /
-    telemetria.massa.get().await?)) - telemetria.surface_gravity.get().await?;
-    let distancia = (v_inicial ** 2 - velocidade_final ** 2) / (2 * acelerecao);
-    Ok(distancia);
+
+    let v_inicial: f64 = telemetria.velocidade_vertical.get().await?;
+    let acelerecao: f64 = ((telemetria.velocidade_vertical.get().await? / 
+    telemetria.velocidade.get().await?) * (telemetria.trust_maximo.get().await? as f64 /
+    telemetria.massa.get().await? as f64)) - telemetria.gravidade_superficial;
+    let distancia: f64 = (v_inicial.powi(2) - velocidade_final.powi(2)) / (2.0 * acelerecao).abs();
+    //println!("Distancia de queima: {:.2} m", distancia);
+    Ok(distancia)
 }
     
 impl Telemetria {
@@ -287,6 +313,7 @@ impl Telemetria {
         let mass_stream = vessel.get_mass_stream().await?;
         let max_trust = vessel.get_max_thrust_stream().await?;
         let altitude_stream = flight.get_mean_altitude_stream().await?;
+        let altitude_superficie = flight.get_surface_altitude_stream().await?;
         let apoapsis_stream = orbit.get_apoapsis_altitude_stream().await?;
         let periapsis_stream = orbit.get_periapsis_altitude_stream().await?;
         let time_apoapsis_stream = orbit.get_time_to_apoapsis_stream().await?;
@@ -326,6 +353,7 @@ impl Telemetria {
             velocidade_horizontal: velocidade_horizontal,
             velocidade: velocidadde,
             impulso_especifico: impulso_especifico,
+            altitude_superficie: altitude_superficie,
         })
     }
 
