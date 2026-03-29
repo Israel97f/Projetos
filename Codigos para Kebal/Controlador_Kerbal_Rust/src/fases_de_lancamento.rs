@@ -21,17 +21,22 @@ struct Telemetria {
     impulso_especifico: Stream<f32>,
 }
 
-pub async fn inicia_comunicacao() -> Result< Arc<Client>, Box<dyn std::error::Error>> {
+static mut telemetria = Arc::new(Telemetria::new());
+
+pub async fn inicia_comunicacao() -> Result<Arc<Client>, Box<dyn std::error::Error>> {
     // Conectar ao servidor kRPC
     let client = Client::new("Launch Script", "127.0.0.1", 50000, 50001).await?;
-    Ok(client)  
+    let space_center = SpaceCenter::new(client.clone());
+    let vessel = space_center.get_active_vessel().await?;
+    telemetria = Arc::new(Telemetria::new(&vessel).await?);
+    Ok(client) 
 }
 
 
-pub async fn lancamto_basico (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn lancamto_basico (client: Arc<Client>, telemetria: Arc<Telemetria>) 
+-> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
-    let telemetria = telemetria(&vessel).await?;
 
     let control = vessel.get_control().await?;
     control.set_throttle(1.0).await?;
@@ -58,11 +63,11 @@ pub async fn lancamto_basico (client: Arc<Client>) -> Result<(), Box<dyn std::er
 }
 
 
-pub async fn orbitador (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn orbitador (client: Arc<Client>) 
+-> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
     let auto_pilot = vessel.get_auto_pilot().await?;
-    let telemetria = telemetria(&vessel).await?;
 
     let control = vessel.get_control().await?;
     control.set_throttle(1.0).await?;
@@ -131,7 +136,7 @@ pub async fn orbitador (client: Arc<Client>) -> Result<(), Box<dyn std::error::E
             break;
         }
 
-        print_telemetria(&telemetria).await;
+        telemetria.print().await;
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     }
 
@@ -152,14 +157,14 @@ pub async fn orbitador (client: Arc<Client>) -> Result<(), Box<dyn std::error::E
             break;
         }
         
-        print_telemetria(&telemetria).await?;
+        telemetria.print().await?;
     }
 
     Ok(())
 }
 
 
-
+/*
 async fn aterricador (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
@@ -233,75 +238,107 @@ async fn distancia_de_queima(dv: f64) -> (f64, f64) {
 
     distance = (dv ** 2 - 25) / (2 * acceleration) * vp; //math.sin(math.atan(- vertical_speed() / horizontal_speed()))
     (distance, mass)
+} // */
+
+async fn aterricador (client: Arc<Client>) 
+-> Result<(), Box<dyn std::error::Error>> {
+    let space_center = SpaceCenter::new(client);
+    let vessel = space_center.get_active_vessel().await?;
+    let control = vessel.get_control().await?;
+
+    loop{
+        if telemetria.altitude.get().await? <= ditancia_de_queima(5.0, telemetria).await?{
+            control.set_throttle(1.0).await?
+        
+        }
+
+        if telemetria.velocidade.get().await? <= 5.0 {
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+
+async fn ditancia_de_queima (velocidade_final: f64)
+-> Result<f64, Box<dyn std::error::Error>> {
+    let v_inicial = telemetria.velocidade_vertical.get().await?;
+    let acelerecao = ((telemetria.velocidade_vertical.get().await? / 
+    telemetria.velocidade.get().await?) * (telemetria.trust_maximo.get().await? /
+    telemetria.massa.get().await?)) - telemetria.surface_gravity.get().await?;
+    let distancia = (v_inicial ** 2 - velocidade_final ** 2) / (2 * acelerecao);
+    Ok(distancia);
 }
     
+impl Telemetria {
+    async fn new (vessel: &krpc_client::services::space_center::Vessel) -> Result<Telemetria, Box<dyn std::error::Error>> {
+        // stream de altitude
+        let flight = vessel.flight(None).await?;
+        let orbit = vessel.get_orbit().await?;
+        let body = orbit.get_body().await?;
+        let veloref_flight = body.get_reference_frame().await?;
+        let veloref_orbit = body.get_orbital_reference_frame().await?;
 
-async fn telemetria(vessel: &krpc_client::services::space_center::Vessel) -> Result<Telemetria, Box<dyn std::error::Error>> {
-    // stream de altitude
-    let flight = vessel.flight(None).await?;
-    let orbit = vessel.get_orbit().await?;
-    let body = orbit.get_body().await?;
-    let veloref_flight = body.get_reference_frame().await?;
-    let veloref_orbit = body.get_orbital_reference_frame().await?;
+        let gravitational_parameter = body.get_gravitational_parameter().await?;
+        let equatorial_radius = body.get_equatorial_radius().await?;
+        let surface_gravity = body.get_surface_gravity().await?;
 
-    let gravitational_parameter = body.get_gravitational_parameter().await?;
-    let equatorial_radius = body.get_equatorial_radius().await?;
-    let surface_gravity = body.get_surface_gravity().await?;
+        let mass_stream = vessel.get_mass_stream().await?;
+        let max_trust = vessel.get_max_thrust_stream().await?;
+        let altitude_stream = flight.get_mean_altitude_stream().await?;
+        let apoapsis_stream = orbit.get_apoapsis_altitude_stream().await?;
+        let periapsis_stream = orbit.get_periapsis_altitude_stream().await?;
+        let time_apoapsis_stream = orbit.get_time_to_apoapsis_stream().await?;
+        let speed_orbit_stream = vessel.flight(Some(&veloref_orbit)).await?.get_speed_stream().await?;
+        let height_seia_level_stream = vessel.flight(Some(&veloref_flight)).await?.get_mean_altitude_stream().await?;
+        let velocidade_vetical = vessel.flight(Some(&veloref_flight)).await?.get_vertical_speed_stream().await?;
+        let velocidade_horizontal = vessel.flight(Some(&veloref_flight)).await?.get_horizontal_speed_stream().await?;
+        let velocidadde = vessel.flight(Some(&veloref_flight)).await?.get_speed_stream().await?;
+        let impulso_especifico = vessel.get_specific_impulse_stream().await?;
 
-    let mass_stream = vessel.get_mass_stream().await?;
-    let max_trust = vessel.get_max_thrust_stream().await?;
-    let altitude_stream = flight.get_mean_altitude_stream().await?;
-    let apoapsis_stream = orbit.get_apoapsis_altitude_stream().await?;
-    let periapsis_stream = orbit.get_periapsis_altitude_stream().await?;
-    let time_apoapsis_stream = orbit.get_time_to_apoapsis_stream().await?;
-    let speed_orbit_stream = vessel.flight(Some(&veloref_orbit)).await?.get_speed_stream().await?;
-    let height_seia_level_stream = vessel.flight(Some(&veloref_flight)).await?.get_mean_altitude_stream().await?;
-    let velocidade_vetical = vessel.flight(Some(&veloref_flight)).await?.get_vertical_speed_stream().await?;
-    let velocidade_horizontal = vessel.flight(Some(&veloref_flight)).await?.get_horizontal_speed_stream().await?;
-    let velocidadde = vessel.flight(Some(&veloref_flight)).await?.get_speed_stream().await?;
-    let impulso_especifico = vessel.get_specific_impulse_stream().await?;
-
-    altitude_stream.set_rate(5.0).await?;
-    mass_stream.set_rate(5.0).await?;
-    apoapsis_stream.set_rate(5.0).await?;
-    periapsis_stream.set_rate(5.0).await?;
-    max_trust.set_rate(5.0).await?;
-    speed_orbit_stream.set_rate(5.0).await?;
-    time_apoapsis_stream.set_rate(5.0).await?;
-    height_seia_level_stream.set_rate(5.0).await?;
-
-
-    // Aguarda um pouco para as streams serem populadas
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
-    Ok(Telemetria {
-        altitude: altitude_stream,
-        massa: mass_stream,
-        gravidade_superficial: surface_gravity,
-        apoastro: apoapsis_stream,
-        trust_maximo: max_trust,
-        parametro_gravitacional: gravitational_parameter,  
-        raio_equatorial: equatorial_radius,
-        periastro: periapsis_stream,
-        velocidade_orbital: speed_orbit_stream,
-        tempo_para_apoastro: time_apoapsis_stream,
-        altitude_nivel_mar: height_seia_level_stream,
-        velocidade_vertical: velocidade_vetical,
-        velocidade_horizontal: velocidade_horizontal,
-        velocidade: velocidadde,
-        impulso_especifico: impulso_especifico,
-    })
-}
+        altitude_stream.set_rate(5.0).await?;
+        mass_stream.set_rate(5.0).await?;
+        apoapsis_stream.set_rate(5.0).await?;
+        periapsis_stream.set_rate(5.0).await?;
+        max_trust.set_rate(5.0).await?;
+        speed_orbit_stream.set_rate(5.0).await?;
+        time_apoapsis_stream.set_rate(5.0).await?;
+        height_seia_level_stream.set_rate(5.0).await?;
 
 
-async fn print_telemetria(telemetria: &Telemetria) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Altitude: {:.2} m", telemetria.altitude.get().await.unwrap_or(0.0));
-    println!("Massa: {:.2} kg", telemetria.massa.get().await.unwrap_or(0.0));
-    println!("Gravidade Superficial: {:.2} m/s²", telemetria.gravidade_superficial);
-    println!("Apoastro: {:.2} m", telemetria.apoastro.get().await.unwrap_or(0.0));
-    println!("Periastro: {:.2} m", telemetria.periastro.get().await.unwrap_or(0.0));
-    println!("Velocidade Orbital: {:.2} m/s", telemetria.velocidade_orbital.get().await.unwrap_or(0.0));
-    println!("Tempo para Apoastro: {:.2} s", telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0));
-    println!("Altitude Nível do Mar: {:.2} m", telemetria.altitude_nivel_mar.get().await.unwrap_or(0.0));
-    Ok(())
+        // Aguarda um pouco para as streams serem populadas
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        Ok(Self {
+            altitude: altitude_stream,
+            massa: mass_stream,
+            gravidade_superficial: surface_gravity,
+            apoastro: apoapsis_stream,
+            trust_maximo: max_trust,
+            parametro_gravitacional: gravitational_parameter,  
+            raio_equatorial: equatorial_radius,
+            periastro: periapsis_stream,
+            velocidade_orbital: speed_orbit_stream,
+            tempo_para_apoastro: time_apoapsis_stream,
+            altitude_nivel_mar: height_seia_level_stream,
+            velocidade_vertical: velocidade_vetical,
+            velocidade_horizontal: velocidade_horizontal,
+            velocidade: velocidadde,
+            impulso_especifico: impulso_especifico,
+        })
+    }
+
+
+    async fn print(&self) -> Result<(), Box<dyn std::error::Error>> {
+        println!("Altitude: {:.2} m", self.altitude.get().await?);
+        println!("Massa: {:.2} kg", self.massa.get().await?);
+        println!("Gravidade Superficial: {:.2} m/s²", self.gravidade_superficial);
+        println!("Apoastro: {:.2} m", self.apoastro.get().await?);
+        println!("Periastro: {:.2} m", self.periastro.get().await?);
+        println!("Velocidade Orbital: {:.2} m/s", self.velocidade_orbital.get().await?);
+        println!("Tempo para Apoastro: {:.2} s", self.tempo_para_apoastro.get().await?);
+        println!("Altitude Nível do Mar: {:.2} m", self.altitude_nivel_mar.get().await?);
+        Ok(())
+    }
 }
