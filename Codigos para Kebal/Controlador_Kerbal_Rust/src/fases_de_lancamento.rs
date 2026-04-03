@@ -245,12 +245,21 @@ pub async fn aterricador (client: Arc<Client>)
     let vessel = space_center.get_active_vessel().await?;
     let telemetria = Telemetria::new(&vessel).await?;
     let control = vessel.get_control().await?;
+    let auto_pilot = vessel.get_auto_pilot().await?;
+    auto_pilot.set_sas_mode(krpc_client::services::space_center::SASMode::Retrograde).await?;
 
     loop{
-        println!("Altitude: {:.2} m", telemetria.altitude_superficie.get().await?);
+        //println!("Altitude: {:.2} m", telemetria.altitude_superficie.get().await?);
+        //telemetria.print().await?;
         if telemetria.altitude_superficie.get().await? <= distancia_de_queima(5.0, &telemetria).await?{
             control.set_throttle(1.0).await?
         
+        }
+
+        if telemetria.velocidade_vertical.get().await? > -0.5 {
+            let throttle = telemetria.massa.get().await? * (telemetria.gravidade_superficial as f32) * 0.8 / 
+            telemetria.trust_maximo.get().await?;
+            control.set_throttle(throttle).await?;
         }
 
         if telemetria.velocidade.get().await? <= 5.0 {
@@ -269,13 +278,16 @@ async fn pouso (vessel: &krpc_client::services::space_center::Vessel) -> Result<
     let auto_pilot = vessel.get_auto_pilot().await?;
 
     auto_pilot.target_pitch_and_heading(90.0, 90.0).await?;
+    vessel.get_control().await?.set_gear(true).await?;
 
     loop {
-        let throttle = 1.0 * telemetria.massa.get().await? as f64 * telemetria.gravidade_superficial /
+        let throttle = 0.999 * telemetria.massa.get().await? as f64 * telemetria.gravidade_superficial /
         telemetria.trust_maximo.get().await? as f64;
         control.set_throttle(throttle as f32).await?;
 
-        if telemetria.altitude_superficie.get().await? < 0.0 {
+        if telemetria.altitude_superficie.get().await? <= 17.0 &&
+        telemetria.velocidade_vertical.get().await? == 0.0 {
+            control.set_throttle(0.0).await?;
             break;
         }
     }
@@ -290,10 +302,10 @@ async fn distancia_de_queima (velocidade_final: f64, telemetria: &Telemetria)
 
     let v_inicial: f64 = telemetria.velocidade_vertical.get().await?;
     let acelerecao: f64 = ((telemetria.velocidade_vertical.get().await? / 
-    telemetria.velocidade.get().await?) * (telemetria.trust_maximo.get().await? as f64 /
+    telemetria.velocidade.get().await?).abs() * (telemetria.trust_maximo.get().await? as f64 /
     telemetria.massa.get().await? as f64)) - telemetria.gravidade_superficial;
     let distancia: f64 = (v_inicial.powi(2) - velocidade_final.powi(2)) / (2.0 * acelerecao).abs();
-    //println!("Distancia de queima: {:.2} m", distancia);
+    println!("Distancia de queima: {:.2} m", distancia);
     Ok(distancia)
 }
     
@@ -359,14 +371,31 @@ impl Telemetria {
 
 
     async fn print(&self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Altitude: {:.2} m", self.altitude.get().await?);
-        println!("Massa: {:.2} kg", self.massa.get().await?);
+        // Coleta todos os valores primeiro para garantir que não há erros antes de limpar/imprimir
+        let altitude = self.altitude.get().await?;
+        let massa = self.massa.get().await?;
+        let apoastro = self.apoastro.get().await?;
+        let periastro = self.periastro.get().await?;
+        let velocidade_orbital = self.velocidade_orbital.get().await?;
+        let tempo_para_apoastro = self.tempo_para_apoastro.get().await?;
+        let altitude_nivel_mar = self.altitude_nivel_mar.get().await?;
+        let trust_maximo = self.trust_maximo.get().await?;
+        
+        // Agora que todos os dados foram obtidos com sucesso, limpa a tela e imprime
+        //print!("\x1B[2J\x1B[H"); // Limpa a tela e move o cursor para o início
+        println!("Altitude: {:.2} m", altitude);
+        println!("Massa: {:.2} kg", massa);
         println!("Gravidade Superficial: {:.2} m/s²", self.gravidade_superficial);
-        println!("Apoastro: {:.2} m", self.apoastro.get().await?);
-        println!("Periastro: {:.2} m", self.periastro.get().await?);
-        println!("Velocidade Orbital: {:.2} m/s", self.velocidade_orbital.get().await?);
-        println!("Tempo para Apoastro: {:.2} s", self.tempo_para_apoastro.get().await?);
-        println!("Altitude Nível do Mar: {:.2} m", self.altitude_nivel_mar.get().await?);
+        println!("Apoastro: {:.2} m", apoastro);
+        println!("Periastro: {:.2} m", periastro);
+        println!("Velocidade Orbital: {:.2} m/s", velocidade_orbital);
+        println!("Tempo para Apoastro: {:.2} s", tempo_para_apoastro);
+        println!("Altitude Nível do Mar: {:.2} m", altitude_nivel_mar);
+        println!("Trust Máximo: {:.2} N", trust_maximo);
+        println!("velocidade Vertical: {:.2} m/s", self.velocidade_vertical.get().await?);
+        println!("velocidade Horizontal: {:.2} m/s", self.velocidade_horizontal.get().await?);
+        println!("velocidade: {:.2} m/s", self.velocidade.get().await?);
+
         Ok(())
     }
 }
