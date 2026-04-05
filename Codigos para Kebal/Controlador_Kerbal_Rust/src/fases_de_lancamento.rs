@@ -20,6 +20,7 @@ struct Telemetria {
     velocidade: Stream<f64>,
     impulso_especifico: Stream<f32>,
     altitude_superficie: Stream<f64>,
+    posicao_retrograde: Stream<(f64, f64, f64)>,
 }
 
 
@@ -30,7 +31,7 @@ pub async fn inicia_comunicacao() -> Result<Arc<Client>, Box<dyn std::error::Err
 }
 
 
-pub async fn lancamto_basico (client: Arc<Client>) 
+pub async fn lancamento_basico (client: Arc<Client>) 
 -> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
@@ -248,11 +249,33 @@ pub async fn aterricador (client: Arc<Client>)
     let auto_pilot = vessel.get_auto_pilot().await?;
     auto_pilot.set_sas_mode(krpc_client::services::space_center::SASMode::Retrograde).await?;
 
+    let mut primeira_vez = true;
+    let mut angulo_de_ataque_inicial = 0.0;
+    let twr = telemetria.trust_maximo.get().await? / (telemetria.massa.get().await? * telemetria.gravidade_superficial as f32);
+
     loop{
         //println!("Altitude: {:.2} m", telemetria.altitude_superficie.get().await?);
         //telemetria.print().await?;
-        if telemetria.altitude_superficie.get().await? <= distancia_de_queima(5.0, &telemetria).await?{
-            control.set_throttle(1.0).await?
+        if telemetria.altitude_superficie.get().await? <= distancia_de_queima(25.0 * 
+            (angulo_de_ataque_inicial as f64).cos(), &telemetria).await? + 70.0{
+            let throttle: f32;
+
+            let angulo_de_ataque_atual = (telemetria.velocidade_vertical.get().await? / 
+                telemetria.velocidade_horizontal.get().await?).atan() as f32;
+
+            if primeira_vez { 
+                angulo_de_ataque_inicial = angulo_de_ataque_atual;
+                primeira_vez = false;
+            }
+
+            if telemetria.velocidade_vertical.get().await? < -25.0 {
+                throttle = telemetria.massa.get().await? * (telemetria.gravidade_superficial as f32) * 
+                (twr * (angulo_de_ataque_inicial - angulo_de_ataque_atual).cos()) / telemetria.trust_maximo.get().await?;
+            } else {
+                 throttle = telemetria.massa.get().await? * (telemetria.gravidade_superficial as f32) * 
+                (1.02) / telemetria.trust_maximo.get().await?;
+            }
+            control.set_throttle(throttle).await?
         
         }
 
@@ -262,7 +285,7 @@ pub async fn aterricador (client: Arc<Client>)
             control.set_throttle(throttle).await?;
         }
 
-        if telemetria.velocidade.get().await? <= 5.0 {
+        if telemetria.velocidade.get().await? <= 25.0 {
             pouso(&vessel).await?;
             break;
         }
@@ -278,15 +301,32 @@ async fn pouso (vessel: &krpc_client::services::space_center::Vessel) -> Result<
     let auto_pilot = vessel.get_auto_pilot().await?;
 
     auto_pilot.target_pitch_and_heading(90.0, 90.0).await?;
+    auto_pilot.engage().await?;
     vessel.get_control().await?.set_gear(true).await?;
 
     loop {
-        let throttle = 0.999 * telemetria.massa.get().await? as f64 * telemetria.gravidade_superficial /
+
+        if telemetria.velocidade_horizontal.get().await? > 1.0 {
+            let dir_retrograde = telemetria.posicao_retrograde.get().await?;
+            auto_pilot.set_attenuation_angle((0.5, 0.5, 0.5)).await?;
+            auto_pilot.set_target_direction((dir_retrograde.0 * 0.25, dir_retrograde.1 * 0.25, dir_retrograde.2 * 0.25)).await?;
+        } else {
+            auto_pilot.set_target_direction((1.0, 0.0, 0.0)).await?;
+        }
+
+        let mut throttle = telemetria.massa.get().await? as f64 * telemetria.gravidade_superficial /
         telemetria.trust_maximo.get().await? as f64;
+
+        if telemetria.velocidade_vertical.get().await? < -5.0 {
+            throttle *= 1.5;
+        } else {
+            throttle *= 0.999;
+        }
+
         control.set_throttle(throttle as f32).await?;
 
-        if telemetria.altitude_superficie.get().await? <= 17.0 &&
-        telemetria.velocidade_vertical.get().await? == 0.0 {
+        if telemetria.altitude_superficie.get().await? <= 37.0 &&
+        (telemetria.velocidade_vertical.get().await?).abs() <= 3.0 {
             control.set_throttle(0.0).await?;
             break;
         }
@@ -335,6 +375,7 @@ impl Telemetria {
         let velocidade_horizontal = vessel.flight(Some(&veloref_flight)).await?.get_horizontal_speed_stream().await?;
         let velocidadde = vessel.flight(Some(&veloref_flight)).await?.get_speed_stream().await?;
         let impulso_especifico = vessel.get_specific_impulse_stream().await?;
+        let posicao_retrograde = vessel.flight(Some(&veloref_flight)).await?.get_retrograde_stream().await?;
 
         altitude_stream.set_rate(5.0).await?;
         mass_stream.set_rate(5.0).await?;
@@ -366,6 +407,7 @@ impl Telemetria {
             velocidade: velocidadde,
             impulso_especifico: impulso_especifico,
             altitude_superficie: altitude_superficie,
+            posicao_retrograde: posicao_retrograde,
         })
     }
 
