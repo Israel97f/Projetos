@@ -164,82 +164,6 @@ pub async fn orbitador (client: Arc<Client>)
 }
 
 
-/*
-async fn aterricador (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
-    let space_center = SpaceCenter::new(client);
-    let vessel = space_center.get_active_vessel().await?;
-    let auto_pilot = vessel.get_auto_pilot().await?;
-
-    let telemetria = telemetria(&vessel).await?;
-
-    let tem_atimosfera = vessel.get_orbit().await?.get_body().await?.get_has_atmosphere().await?;
-    vessel.get_control().await?.toggle_action_group(1).await?;
-    vessel.get_control().await?.set_throttle(1.0).await?;
-    vessel.get_auto_pilot().await?.engage().await?;
-
-    let mut d1 = 0.0;
-    let mut d2 = 0.0;
-
-    loop{
-        if telemetria.velocidade_vertical.get().await.unwrap_or(0.0) < -0.5 &&
-        telemetria.altitude.get().await.unwrap_or(0.0) < 35_000.0 {
-            auto_pilot.set_sas_mode(krpc_client::services::space_center::SASMode::Retrograde).await?;
-
-            if d1  && telemetria.altitude.get().await.unwrap_or(0.0) < d1 + d2 {
-                if tem_atimosfera {
-                    if d1 < 6_000.0 {
-                        let throttle = telemetria.massa.get().await.unwrap_or(0.0);
-                        control.set_throttle(throttle).await?;
-
-                        if telemetria.velocidade.get().await.unwrap_or(0.0) < 25.0 {
-                            break;
-                        }
-                } else {
-                    let throttle = telemetria.massa.get().await.unwrap_or(0.0);
-                    control.set_throttle(throttle).await?;
-
-                    if telemetria.velocidade.get().await.unwrap_or(0.0) < 25.0 {
-                        break;
-                    }
-                }
-            } else {
-
-                d1, initial_mass = distancia_de_queima(telemetria.velocidade.get().await.unwrap_or(0.0));
-                d1 = d1 + 1.7 * telemetria.velocidade.get().await.unwrap_or(0.0);
-                d2 = ((25 ** 2 - 25) / ( 2 * 4.9 ));
-
-            }
-        }
-    }
-}
-
-
-async fn distancia_de_queima(dv: f64) -> (f64, f64) {
-    let specific_impulse = telemetria.impulso_especifico.get().await.unwrap_or(0.0);
-    let surface_gravity = telemetria.gravidade_superficial as f32;
-    let surface_altitude = telemetria.altitude.get().await.unwrap_or(0.0);
-    let mass = telemetria.massa.get().await.unwrap_or(0.0);
-    let speed = telemetria.velocidade.get().await.unwrap_or(0.0);
-    let horizontal_speed = telemetria.velocidade_horizontal.get().await.unwrap_or(0.0);
-    let vertical_speed = telemetria.velocidade_vertical.get().await.unwrap_or(0.0);
-    let max_thrust = telemetria.trust_maximo.get().await.unwrap_or(0.0);
-    
-    let e = std::f64::consts::E;
-
-    exhaustSpeed = specific_impulse * 9.80665; // (specific_impulse * 9.8) é a velocidade de exaustão dos gases
-    k = max_thrust / (exhaustSpeed); 
-
-    speed_variation = dv - 25;
-    burning_time = (1 - (1 / (e.powf (speed_variation / (exhaustSpeed))))) * mass / k;
-
-    let vp = ((- vertical_speed / horizontal_speed).atan()).sin();
-
-    acceleration = ( max_thrust / mass - surface_gravity * vp; /// (speed_variation / burning_time)
-
-    distance = (dv ** 2 - 25) / (2 * acceleration) * vp; //math.sin(math.atan(- vertical_speed() / horizontal_speed()))
-    (distance, mass)
-} // */
-
 pub async fn aterricador (client: Arc<Client>) 
 -> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
@@ -254,8 +178,7 @@ pub async fn aterricador (client: Arc<Client>)
     let twr = telemetria.trust_maximo.get().await? / (telemetria.massa.get().await? * telemetria.gravidade_superficial as f32);
 
     loop{
-        //println!("Altitude: {:.2} m", telemetria.altitude_superficie.get().await?);
-        //telemetria.print().await?;
+
         if telemetria.altitude_superficie.get().await? <= distancia_de_queima(25.0 * 
             (angulo_de_ataque_inicial as f64).cos(), &telemetria).await? + 70.0{
             let throttle: f32;
@@ -346,7 +269,6 @@ async fn pouso (vessel: &krpc_client::services::space_center::Vessel) -> Result<
     }
 
     Ok(())
-
 }
 
 
@@ -455,21 +377,18 @@ impl Telemetria {
     }
 }
 
-fn normalize(v: (f32, f32, f32)) -> (f32, f32, f32) {
-    let mag = (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt();
-    if mag == 0.0 {
-        (0.0, 0.0, 0.0)
-    } else {
-        (v.0 / mag, v.1 / mag, v.2 / mag)
+
+async fn fuel_check(vessel: &krpc_client::services::space_center::Vessel) ->
+Result<(), Box<std::erro::Erro>> {
+    let fuel_motor = vessel.get_parts().await?.get_engines(-1).await?.has_fuel();
+    if fuel_motor {
+        vessel.get_control().await?.set_throttle(0.0).await?;
+        tokio::time::sleep::from_millis(1000);
+        vessel.get_control().await?.activate_next_stage().await?
+        tokio::time::sleep::from_millis(1000);
+        vessel.get_control().await?.set_throttle(1.0).await?;
     }
-}
-
-fn scale(v: (f32, f32, f32), s: f32) -> (f32, f32, f32) {
-    (v.0 * s, v.1 * s, v.2 * s)
-}
-
-fn add(a: (f32, f32, f32), b: (f32, f32, f32)) -> (f32, f32, f32) {
-    (a.0 + b.0, a.1 + b.1, a.2 + b.2)
+    Ok(())
 }
 
 
