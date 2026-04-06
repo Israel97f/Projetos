@@ -304,23 +304,36 @@ async fn pouso (vessel: &krpc_client::services::space_center::Vessel) -> Result<
     auto_pilot.engage().await?;
     vessel.get_control().await?.set_gear(true).await?;
 
+    let mut primeira_vez = true;
+
     loop {
 
-        if telemetria.velocidade_horizontal.get().await? > 1.0 {
-            let dir_retrograde = telemetria.posicao_retrograde.get().await?;
-            auto_pilot.set_attenuation_angle((0.5, 0.5, 0.5)).await?;
-            auto_pilot.set_target_direction((dir_retrograde.0 * 0.25, dir_retrograde.1 * 0.25, dir_retrograde.2 * 0.25)).await?;
+        if telemetria.velocidade_horizontal.get().await? > 3.0 {
+            if primeira_vez {
+                auto_pilot.disengage().await?;
+                auto_pilot.set_sas_mode(krpc_client::services::space_center::SASMode::Retrograde).await?;
+                println!("teste de passagem");
+                primeira_vez = false;
+            }
         } else {
-            auto_pilot.set_target_direction((1.0, 0.0, 0.0)).await?;
+            // caso contrário, mantém vertical
+            auto_pilot.target_pitch_and_heading(90.0, 90.0).await?;
+            auto_pilot.engage().await?;
         }
 
         let mut throttle = telemetria.massa.get().await? as f64 * telemetria.gravidade_superficial /
         telemetria.trust_maximo.get().await? as f64;
 
-        if telemetria.velocidade_vertical.get().await? < -5.0 {
-            throttle *= 1.5;
-        } else {
+        if telemetria.velocidade.get().await? < 3.0 {
             throttle *= 0.999;
+        } else if telemetria.velocidade.get().await? < 15.0 {
+            throttle *= 1.1;
+        } else {
+            throttle *= 1.5;
+        }
+
+        if telemetria.velocidade_vertical.get().await? > -0.5 {
+            throttle *= 0.8;
         }
 
         control.set_throttle(throttle as f32).await?;
@@ -440,4 +453,61 @@ impl Telemetria {
 
         Ok(())
     }
+}
+
+fn normalize(v: (f32, f32, f32)) -> (f32, f32, f32) {
+    let mag = (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt();
+    if mag == 0.0 {
+        (0.0, 0.0, 0.0)
+    } else {
+        (v.0 / mag, v.1 / mag, v.2 / mag)
+    }
+}
+
+fn scale(v: (f32, f32, f32), s: f32) -> (f32, f32, f32) {
+    (v.0 * s, v.1 * s, v.2 * s)
+}
+
+fn add(a: (f32, f32, f32), b: (f32, f32, f32)) -> (f32, f32, f32) {
+    (a.0 + b.0, a.1 + b.1, a.2 + b.2)
+}
+
+
+pub async fn teste (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
+    let space_center = SpaceCenter::new(client);
+    let vessel = space_center.get_active_vessel().await?;
+    let telemetria = Telemetria::new(&vessel).await?;
+    let auto_pilot = vessel.get_auto_pilot().await?;
+
+    let retrograde = telemetria.posicao_retrograde.get().await?;
+    let retro_vec = normalize((retrograde.0 as f32, retrograde.1 as f32, retrograde.2 as f32));
+
+    // vetor vertical (para cima)
+    let up = (1.0, 0.0, 0.0);
+
+    // queremos desviar 10° da vertical em direção ao retrograde
+    let angulo = 30f32.to_radians();
+
+    // combinação linear: direção = cos(θ)*up + sin(θ)*retrograde
+    let target = normalize(add(scale(up, angulo.cos()), scale(retro_vec, angulo.sin())));
+
+    println!("Ajustando para direção inclinada: ({:.2}, {:.2}, {:.2})", target.0, target.1, target.2);
+
+
+    loop {
+        let retrograde = telemetria.posicao_retrograde.get().await?;
+        let x = retrograde.0;
+        let y = retrograde.1;
+        let z = retrograde.2;
+        let angulo = ((x).atan2(y) * 180.0 / std::f64::consts::PI) as f32;
+        let angulo0 = ((-z).atan2(-y) * 180.0 / std::f64::consts::PI) as f32;
+        println!("Posição Retrograde: ({:.2}, {:.2}, {:.2})", x, y, z);
+        // envia vetor alvo para o autopilot
+        auto_pilot.target_pitch_and_heading(angulo0 - 40.0, angulo).await?;
+        //auto_pilot.set_target_direction((target.0 as f64, target.1 as f64, target.2 as f64)).await?;
+        auto_pilot.set_deceleration_time((0.5, 0.5, 0.5)).await?;
+        auto_pilot.set_attenuation_angle((0.5, 0.5, 0.5)).await?;
+        auto_pilot.engage().await?;
+    }
+    Ok(())
 }
