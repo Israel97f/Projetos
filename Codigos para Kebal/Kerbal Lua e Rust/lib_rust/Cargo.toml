@@ -1,0 +1,13 @@
+[package]
+name = "meu_ksp_cliente"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"] # cria uma lib compartilhada
+
+[dependencies]
+mlua = { version = "0.11", features = ["lua55", "module", "mlua_derive"]}
+krpc-client = { git = "https://github.com/kladd/krpc-client", features = ["tokio"] }
+tokio = { version = "1", features = ["full"] }
+
