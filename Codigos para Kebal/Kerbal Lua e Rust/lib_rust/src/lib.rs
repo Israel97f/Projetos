@@ -1,24 +1,59 @@
+use krpc_client::Client;
 use mlua::prelude::*;
+use mlua::UserData;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
 mod fases_de_lancamento;
 
-async fn inicia_conexao(_lua: &Lua, _: ()) -> LuaResult<bool> {
-    let _conn = fases_de_lancamento::inicia_comunicacao()
-        .await
-        .map_err(mlua::Error::external)?;
-    Ok(true)
+struct KrpcConnection {
+    runtime: Arc<Runtime>,
+    client: Arc<Client>,
 }
 
-async fn lancamento(_lua: &Lua, _: ()) -> LuaResult<()> {
-    let _client = fases_de_lancamento::inicia_comunicacao()
-        .await
+impl UserData for KrpcConnection {}
+
+fn inicia_conexao(lua: &Lua, _: ()) -> LuaResult<LuaAnyUserData> {
+    let runtime = Arc::new(Runtime::new().map_err(mlua::Error::external)?);
+    let client = runtime
+        .block_on(fases_de_lancamento::inicia_comunicacao())
         .map_err(mlua::Error::external)?;
-    Ok(())
+    let userdata = lua.create_userdata(KrpcConnection { runtime, client })?;
+    Ok(userdata)
+}
+
+fn lancamento(_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
+    let connection = conn_ud.borrow::<KrpcConnection>()?;
+    let client = connection.client.clone();
+    let runtime = connection.runtime.clone();
+    runtime
+        .block_on(fases_de_lancamento::lancamento_basico(client))
+        .map_err(mlua::Error::external)
+}
+
+fn orbitar (_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
+    let connection = conn_ud.borrow::<KrpcConnection>()?;
+    let client = connection.client.clone();
+    let runtime = connection.runtime.clone();
+    runtime
+        .block_on(fases_de_lancamento::orbitador(client))
+        .map_err(mlua::Error::external)
+}
+
+fn aterrisar (_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
+    let connection = conn_ud.borrow::<KrpcConnection>()?;
+    let client = connection.client.clone();
+    let runtime = connection.runtime.clone();
+    runtime
+        .block_on(fases_de_lancamento::aterricador(client))
+        .map_err(mlua::Error::external)
 }
 
 #[mlua::lua_module]
 fn controle_de_nave(lua: &Lua) -> LuaResult<LuaTable> {
     let exports = lua.create_table()?;
-    exports.set("inicia_conexao", lua.create_async_function(inicia_conexao)?)?;
-    exports.set("lancamento", lua.create_async_function(lancamento)?)?;
+    exports.set("inicia_conexao", lua.create_function(inicia_conexao)?)?;
+    exports.set("lancamento", lua.create_function(lancamento)?)?;
+    exports.set("orbitar", lua.create_function(orbitar)?)?;
+    exports.set("aterrisar", lua.create_function(aterrisar)?)?;
     Ok(exports)
 }

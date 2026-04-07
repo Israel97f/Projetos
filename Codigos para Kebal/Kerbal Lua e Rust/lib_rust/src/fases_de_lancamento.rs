@@ -26,17 +26,24 @@ struct Telemetria {
 
 pub async fn inicia_comunicacao() -> Result<Arc<Client>, Box<dyn std::error::Error>> {
     // Conectar ao servidor kRPC
+    println!("[kRPC] Tentando conectar em 127.0.0.1:50000/50001...");
     let client = Client::new("Launch Script", "127.0.0.1", 50000, 50001).await?;
-    Ok(client) 
+    println!("[kRPC] Conexão estabelecida com sucesso.");
+    Ok(client)
 }
 
 
 pub async fn lancamento_basico (client: Arc<Client>) 
 -> Result<(), Box<dyn std::error::Error>> {
+    println!("[kRPC] Iniciando fase de lançamento básico...");
     let space_center = SpaceCenter::new(client);
+    println!("[kRPC] Serviço SpaceCenter criado.");
     let vessel = space_center.get_active_vessel().await?;
+    println!("[kRPC] Vaso ativo obtido.");
     let telemetria = Telemetria::new(&vessel).await?;
+    println!("[kRPC] Telemetria inicializada.");
     let control = vessel.get_control().await?;
+    println!("[kRPC] Controle do vaso obtido.");
 
     control.set_throttle(1.0).await?;
     control.set_sas(true).await?;
@@ -377,22 +384,6 @@ impl Telemetria {
     }
 }
 
-fn normalize(v: (f32, f32, f32)) -> (f32, f32, f32) {
-    let len = (v.0 * v.0 + v.1 * v.1 + v.2 * v.2).sqrt();
-    if len == 0.0 {
-        (0.0, 0.0, 0.0)
-    } else {
-        (v.0 / len, v.1 / len, v.2 / len)
-    }
-}
-
-fn scale(v: (f32, f32, f32), factor: f32) -> (f32, f32, f32) {
-    (v.0 * factor, v.1 * factor, v.2 * factor)
-}
-
-fn add(a: (f32, f32, f32), b: (f32, f32, f32)) -> (f32, f32, f32) {
-    (a.0 + b.0, a.1 + b.1, a.2 + b.2)
-}
 
 async fn fuel_check(vessel: &krpc_client::services::space_center::Vessel) ->
 Result<(), Box<dyn std::error::Error>> {
@@ -414,43 +405,4 @@ Result<(), Box<dyn std::error::Error>> {
         vessel.get_control().await?.set_throttle(1.0).await?;
     }
     Ok(())
-}
-
-
-pub async fn teste (client: Arc<Client>) -> Result<(), Box<dyn std::error::Error>> {
-    let space_center = SpaceCenter::new(client);
-    let vessel = space_center.get_active_vessel().await?;
-    let telemetria = Telemetria::new(&vessel).await?;
-    let auto_pilot = vessel.get_auto_pilot().await?;
-
-    let retrograde = telemetria.posicao_retrograde.get().await?;
-    let retro_vec = normalize((retrograde.0 as f32, retrograde.1 as f32, retrograde.2 as f32));
-
-    // vetor vertical (para cima)
-    let up = (1.0, 0.0, 0.0);
-
-    // queremos desviar 10° da vertical em direção ao retrograde
-    let angulo = 30f32.to_radians();
-
-    // combinação linear: direção = cos(θ)*up + sin(θ)*retrograde
-    let target = normalize(add(scale(up, angulo.cos()), scale(retro_vec, angulo.sin())));
-
-    println!("Ajustando para direção inclinada: ({:.2}, {:.2}, {:.2})", target.0, target.1, target.2);
-
-
-    loop {
-        let retrograde = telemetria.posicao_retrograde.get().await?;
-        let x = retrograde.0;
-        let y = retrograde.1;
-        let z = retrograde.2;
-        let angulo = ((x).atan2(y) * 180.0 / std::f64::consts::PI) as f32;
-        let angulo0 = ((-z).atan2(-y) * 180.0 / std::f64::consts::PI) as f32;
-        println!("Posição Retrograde: ({:.2}, {:.2}, {:.2})", x, y, z);
-        // envia vetor alvo para o autopilot
-        auto_pilot.target_pitch_and_heading(angulo0 - 40.0, angulo).await?;
-        //auto_pilot.set_target_direction((target.0 as f64, target.1 as f64, target.2 as f64)).await?;
-        auto_pilot.set_deceleration_time((0.5, 0.5, 0.5)).await?;
-        auto_pilot.set_attenuation_angle((0.5, 0.5, 0.5)).await?;
-        auto_pilot.engage().await?;
-    }
 }
