@@ -1,4 +1,4 @@
-use iced::{Length, Settings, Size};
+use iced::{Alignment, Length, Settings, Size};
 use mlua::{Function, Lua, RegistryKey, Table};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -11,8 +11,36 @@ struct ButtonDef {
     action: Option<String>,
 }
 
+struct DisplayDef {
+    label: String,
+    value: String,
+    width: u16,
+    height: u16,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum DisplayPosition {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+impl DisplayPosition {
+    fn from_str(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "left" => DisplayPosition::Left,
+            "right" => DisplayPosition::Right,
+            "bottom" => DisplayPosition::Bottom,
+            _ => DisplayPosition::Top,
+        }
+    }
+}
+
 struct FrameDef {
     buttons: Vec<ButtonDef>,
+    displays: Vec<DisplayDef>,
+    display_position: DisplayPosition,
     button_width: u16,
     button_height: u16,
     window_width: u16,
@@ -120,20 +148,65 @@ fn perform_action(action: String) -> Result<String, String> {
 
 fn view(state: &AppState) -> iced::Element<'_, Message, iced::Theme, iced::Renderer> {
     let state_ref = state.borrow();
-    let mut column = iced::widget::Column::new().spacing(10).padding(20);
 
     if let Some(frame) = state_ref.frames.get(&state_ref.current_frame) {
+        let mut buttons_column = iced::widget::Column::new().spacing(10);
         for (index, button_def) in frame.buttons.iter().enumerate() {
             let button = iced::widget::button(iced::widget::text::<iced::Theme, iced::Renderer>(button_def.label.clone()))
                 .on_press(Message::ButtonPressed(index))
                 .width(Length::Fixed(frame.button_width as f32))
                 .height(Length::Fixed(frame.button_height as f32));
 
-            column = column.push(button);
+            buttons_column = buttons_column.push(button);
         }
-    }
 
-    column.into()
+        if frame.displays.is_empty() {
+            return iced::widget::Container::new(buttons_column)
+                .padding(20)
+                .into();
+        }
+
+        let mut display_column = iced::widget::Column::new().spacing(8);
+        for display in &frame.displays {
+            let display_text = iced::widget::text(format!("{}: {}", display.label, display.value)).size(18);
+            let display_container = iced::widget::container(display_text)
+                .width(Length::Fixed(display.width as f32))
+                .height(Length::Fixed(display.height as f32))
+                .padding(10);
+            display_column = display_column.push(display_container);
+        }
+
+        match frame.display_position {
+            DisplayPosition::Left => iced::widget::Row::new()
+                .spacing(20)
+                .align_y(Alignment::Start)
+                .push(display_column)
+                .push(buttons_column)
+                .padding(20)
+                .into(),
+            DisplayPosition::Right => iced::widget::Row::new()
+                .spacing(20)
+                .align_y(Alignment::Start)
+                .push(buttons_column)
+                .push(display_column)
+                .padding(20)
+                .into(),
+            DisplayPosition::Bottom => iced::widget::Column::new()
+                .spacing(20)
+                .padding(20)
+                .push(buttons_column)
+                .push(display_column)
+                .into(),
+            DisplayPosition::Top => iced::widget::Column::new()
+                .spacing(20)
+                .padding(20)
+                .push(display_column)
+                .push(buttons_column)
+                .into(),
+        }
+    } else {
+        iced::widget::Column::new().into()
+    }
 }
 
 fn load_frame(
@@ -143,6 +216,8 @@ fn load_frame(
     default_window_height: u16,
     default_button_width: u16,
     default_button_height: u16,
+    default_display_width: u16,
+    default_display_height: u16,
     default_always_on_top: bool,
 ) -> mlua::Result<FrameDef> {
     let button_size_table: Option<Table> = frame_table.get("button_size")?;
@@ -177,8 +252,45 @@ fn load_frame(
         None => default_window_height,
     };
 
+    let display_size_table: Option<Table> = frame_table.get("display_size")?;
+    let display_width = match display_size_table {
+        Some(ref t) => {
+            let width: Option<u16> = t.get("width")?;
+            width.unwrap_or(default_display_width)
+        }
+        None => default_display_width,
+    };
+    let display_height = match display_size_table {
+        Some(ref t) => {
+            let height: Option<u16> = t.get("height")?;
+            height.unwrap_or(default_display_height)
+        }
+        None => default_display_height,
+    };
+
+    let display_position: String = frame_table.get::<Option<String>>("display_position")?.unwrap_or_else(|| "top".to_string());
+    let display_position = DisplayPosition::from_str(&display_position);
+
     let always_on_top: Option<bool> = frame_table.get("always_on_top")?;
     let always_on_top = always_on_top.unwrap_or(default_always_on_top);
+
+    let mut displays = Vec::new();
+    if let Some(displays_table) = frame_table.get::<Option<Table>>("displays")? {
+        for pair in displays_table.sequence_values::<Table>() {
+            let table = pair?;
+            let label: String = table.get("label")?;
+            let value: Option<String> = table.get("value")?;
+            let width: Option<u16> = table.get("width")?;
+            let height: Option<u16> = table.get("height")?;
+
+            displays.push(DisplayDef {
+                label,
+                value: value.unwrap_or_default(),
+                width: width.unwrap_or(display_width),
+                height: height.unwrap_or(display_height),
+            });
+        }
+    }
 
     let buttons_table: Table = match frame_table.get("buttons")? {
         Some(table) => table,
@@ -203,6 +315,8 @@ fn load_frame(
 
     Ok(FrameDef {
         buttons,
+        displays,
+        display_position,
         button_width,
         button_height,
         window_width,
@@ -235,6 +349,35 @@ fn lua_ui_bridge(lua: &Lua) -> mlua::Result<mlua::Table> {
                 }
             } else {
                 let err = "Nenhum aplicativo em execução para mudar o frame".to_string();
+                eprintln!("{err}");
+                Err(mlua::Error::RuntimeError(err))
+            }
+        })?,
+    )?;
+
+    let change_frame_state = current_app_state.clone();
+    exports.set(
+        "definir_display",
+        lua.create_function(move |_, (frame_name, display_label, value): (String, String, String)| {
+            let maybe_state = change_frame_state.borrow();
+            if let Some(app_state) = maybe_state.as_ref() {
+                let mut state = app_state.borrow_mut();
+                if let Some(frame) = state.frames.get_mut(&frame_name) {
+                    if let Some(display) = frame.displays.iter_mut().find(|d| d.label == display_label) {
+                        display.value = value;
+                        Ok(())
+                    } else {
+                        let err = format!("Display '{}' não encontrado no frame '{}'", display_label, frame_name);
+                        eprintln!("{err}");
+                        Err(mlua::Error::RuntimeError(err))
+                    }
+                } else {
+                    let err = format!("Frame '{}' não encontrado", frame_name);
+                    eprintln!("{err}");
+                    Err(mlua::Error::RuntimeError(err))
+                }
+            } else {
+                let err = "Nenhum aplicativo em execução para definir display".to_string();
                 eprintln!("{err}");
                 Err(mlua::Error::RuntimeError(err))
             }
@@ -280,6 +423,22 @@ fn lua_ui_bridge(lua: &Lua) -> mlua::Result<mlua::Table> {
                     None => 600,
                 };
 
+                let default_display_size_table: Option<Table> = config.get("display_size")?;
+                let default_display_width = match default_display_size_table {
+                    Some(ref t) => {
+                        let width: Option<u16> = t.get("width")?;
+                        width.unwrap_or(300)
+                    }
+                    None => 300,
+                };
+                let default_display_height = match default_display_size_table {
+                    Some(ref t) => {
+                        let height: Option<u16> = t.get("height")?;
+                        height.unwrap_or(50)
+                    }
+                    None => 50,
+                };
+
                 let default_always_on_top: bool = config.get::<Option<bool>>("always_on_top")?.unwrap_or(false);
 
                 let initial_frame_opt: Option<String> = config.get("initial_frame")?;
@@ -297,6 +456,8 @@ fn lua_ui_bridge(lua: &Lua) -> mlua::Result<mlua::Table> {
                             default_window_height,
                             default_button_width,
                             default_button_height,
+                            default_display_width,
+                            default_display_height,
                             default_always_on_top,
                         )?;
                         frames.insert(name, frame_def);
@@ -326,6 +487,8 @@ fn lua_ui_bridge(lua: &Lua) -> mlua::Result<mlua::Table> {
                         default_window_height,
                         default_button_width,
                         default_button_height,
+                        default_display_width,
+                        default_display_height,
                         default_always_on_top,
                     )?;
                     frames.insert("default".to_string(), frame_def);

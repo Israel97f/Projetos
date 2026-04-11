@@ -21,6 +21,7 @@ struct Telemetria {
     impulso_especifico: Stream<f32>,
     altitude_superficie: Stream<f64>,
     posicao_retrograde: Stream<(f64, f64, f64)>,
+    tem_atmosfera: bool,
 }
 
 
@@ -183,11 +184,19 @@ pub async fn aterricador(client: Arc<Client>)
     let mut primeira_vez = true;
     let mut angulo_de_ataque_inicial = 0.0;
     let twr = telemetria.trust_maximo.get().await? / (telemetria.massa.get().await? * telemetria.gravidade_superficial as f32);
+    let mut altura_maxima_de_inicio_de_queima = 0.0;
 
     loop{
 
+        if telemetria.tem_atmosfera  {
+            altura_maxima_de_inicio_de_queima = 4_500.00;
+        } else {
+            altura_maxima_de_inicio_de_queima = 45_000.00;
+        }
+
         if telemetria.altitude_superficie.get().await? <= distancia_de_queima(25.0 * 
-            (angulo_de_ataque_inicial as f64).cos(), &telemetria).await? + 70.0{
+            (angulo_de_ataque_inicial as f64).cos(), &telemetria).await? + 70.0 && 
+            telemetria.altitude_superficie.get().await? < altura_maxima_de_inicio_de_queima {
             let throttle: f32;
 
             let angulo_de_ataque_atual = (telemetria.velocidade_vertical.get().await? / 
@@ -268,8 +277,10 @@ async fn pouso(vessel: &krpc_client::services::space_center::Vessel) -> Result<(
 
         control.set_throttle(throttle as f32).await?;
 
-        if telemetria.altitude_superficie.get().await? <= 37.0 &&
-        (telemetria.velocidade_vertical.get().await?).abs() <= 3.0 {
+        
+        if vessel.get_situation().await? == krpc_client::services::space_center::VesselSituation::Landed ||
+        vessel.get_situation().await? == krpc_client::services::space_center::VesselSituation::Splashed {
+            println!("Pouso realizado com sucesso!");
             control.set_throttle(0.0).await?;
             break;
         }
@@ -303,6 +314,7 @@ impl Telemetria {
         let gravitational_parameter = body.get_gravitational_parameter().await?;
         let equatorial_radius = body.get_equatorial_radius().await?;
         let surface_gravity = body.get_surface_gravity().await?;
+        let tem_atimosfera = body.get_atmosphere_depth().await? > 0.0;
 
         let mass_stream = vessel.get_mass_stream().await?;
         let max_trust = vessel.get_max_thrust_stream().await?;
@@ -350,6 +362,7 @@ impl Telemetria {
             impulso_especifico: impulso_especifico,
             altitude_superficie: altitude_superficie,
             posicao_retrograde: posicao_retrograde,
+            tem_atmosfera: tem_atimosfera,
         })
     }
 

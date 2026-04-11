@@ -39,7 +39,7 @@ fn orbitar(_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
         .map_err(mlua::Error::external)
 }
 
-fn aterrisar(_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
+fn aterrissar(_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
     let connection = conn_ud.borrow::<KrpcConnection>()?;
     let client = connection.client.clone();
     let runtime = connection.runtime.clone();
@@ -54,6 +54,6 @@ fn controle_de_nave(lua: &Lua) -> LuaResult<LuaTable> {
     exports.set("inicia_conexao", lua.create_function(inicia_conexao)?)?;
     exports.set("lancamento", lua.create_function(lancamento)?)?;
     exports.set("orbitar", lua.create_function(orbitar)?)?;
-    exports.set("aterrisar", lua.create_function(aterrisar)?)?;
+    exports.set("aterrissar", lua.create_function(aterrissar)?)?;
     Ok(exports)
 }

@@ -1,4 +1,4 @@
-package.cpath = package.cpath .. ";?.dll;"
+package.cpath = package.cpath .. ";./lib_rust/target/release/?.dll;./lib_rust/target/debug/?.dll;?.dll"
 local krpc = require("controle_de_nave")
 
 
@@ -11,5 +11,5 @@ elseif argumentos[1] == "orbitar" then
     krpc.lancamento(client)
     krpc.orbitar(client)
 elseif argumentos[1] == "aterrissagem" then
-    krpc.aterrisar(client)
+    krpc.aterrissar(client)
 end
