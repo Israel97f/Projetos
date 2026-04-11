@@ -171,7 +171,7 @@ pub async fn orbitador (client: Arc<Client>)
 }
 
 
-pub async fn aterricador (client: Arc<Client>) 
+pub async fn aterricador(client: Arc<Client>) 
 -> Result<(), Box<dyn std::error::Error>> {
     let space_center = SpaceCenter::new(client);
     let vessel = space_center.get_active_vessel().await?;
@@ -225,7 +225,7 @@ pub async fn aterricador (client: Arc<Client>)
 }
 
 
-async fn pouso (vessel: &krpc_client::services::space_center::Vessel) -> Result<(), Box<dyn std::error::Error>> {
+async fn pouso(vessel: &krpc_client::services::space_center::Vessel) -> Result<(), Box<dyn std::error::Error>> {
     let telemetria = Telemetria::new(&vessel).await?;
     let control = vessel.get_control().await?;
     let auto_pilot = vessel.get_auto_pilot().await?;
@@ -279,7 +279,7 @@ async fn pouso (vessel: &krpc_client::services::space_center::Vessel) -> Result<
 }
 
 
-async fn distancia_de_queima (velocidade_final: f64, telemetria: &Telemetria)
+async fn distancia_de_queima(velocidade_final: f64, telemetria: &Telemetria)
 -> Result<f64, Box<dyn std::error::Error>> {
 
     let v_inicial: f64 = telemetria.velocidade_vertical.get().await?;
@@ -292,7 +292,7 @@ async fn distancia_de_queima (velocidade_final: f64, telemetria: &Telemetria)
 }
     
 impl Telemetria {
-    async fn new (vessel: &krpc_client::services::space_center::Vessel) -> Result<Telemetria, Box<dyn std::error::Error>> {
+    async fn new(vessel: &krpc_client::services::space_center::Vessel) -> Result<Telemetria, Box<dyn std::error::Error>> {
         // stream de altitude
         let flight = vessel.flight(None).await?;
         let orbit = vessel.get_orbit().await?;

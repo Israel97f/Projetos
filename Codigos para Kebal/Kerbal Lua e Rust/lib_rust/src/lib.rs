@@ -30,7 +30,7 @@ fn lancamento(_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
         .map_err(mlua::Error::external)
 }
 
-fn orbitar (_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
+fn orbitar(_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
     let connection = conn_ud.borrow::<KrpcConnection>()?;
     let client = connection.client.clone();
     let runtime = connection.runtime.clone();
@@ -39,7 +39,7 @@ fn orbitar (_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
         .map_err(mlua::Error::external)
 }
 
-fn aterrisar (_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
+fn aterrisar(_lua: &Lua, conn_ud: LuaAnyUserData) -> LuaResult<()> {
     let connection = conn_ud.borrow::<KrpcConnection>()?;
     let client = connection.client.clone();
     let runtime = connection.runtime.clone();
