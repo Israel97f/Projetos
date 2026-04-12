@@ -4,6 +4,7 @@ use mlua::UserData;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 mod fases_de_lancamento;
+mod gerenciador_de_dados;
 
 struct KrpcConnection {
     runtime: Arc<Runtime>,

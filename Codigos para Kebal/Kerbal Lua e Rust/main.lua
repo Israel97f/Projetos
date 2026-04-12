@@ -1,5 +1,6 @@
 package.cpath = package.cpath .. ";./lua_ui_bridge/target/debug/?.dll;./lua_ui_bridge/target/release/?.dll;?.dll"
 local lua_ui_bridge = require("lua_ui_bridge")
+local dados = require("gerenciador_de_dados")
 
 function itera()
     local i = 0
@@ -28,10 +29,9 @@ local frames = {
             { label = "Orbitar", callback = function() lua_ui_bridge.mudar_frame("Orbitar") end },
             { label = "Aterrisagem", callback = function() lua_ui_bridge.mudar_frame("Aterrisagem") end },
             { label = "Atualizar dados", callback = function()
-                lua_ui_bridge.definir_display("controles", "Velocidade", "1500 m/s")
-                lua_ui_bridge.definir_display("controles", "Altitude", tostring(contador()) .. " m")
+                proc = io.popen("lua teste.lua", "r")
             end },
-            { label = "Encerrar conexão", callback = function()  end },
+            { label = "Encerrar conexão", callback = function() os.execute("taskkill /F /IM lua.exe") end },
         },
     },
     lancamento = {
@@ -43,7 +43,7 @@ local frames = {
             end },
             { label = "Voltar", callback = function() lua_ui_bridge.mudar_frame("controles")
                 if proc then
-                    proc:close()
+                    --proc:close()
                 end
              end },
         },
@@ -57,7 +57,7 @@ local frames = {
             end },
             { label = "Voltar", callback = function() lua_ui_bridge.mudar_frame("controles")
                 if proc then
-                    proc:close()
+                    --proc:close()
                 end
              end },
         },
@@ -71,7 +71,7 @@ local frames = {
             end },
             { label = "Voltar", callback = function() lua_ui_bridge.mudar_frame("controles") 
                 if proc then
-                    proc:close()
+                    --proc:close()
                 end
             end },
         },
@@ -82,7 +82,17 @@ lua_ui_bridge.abrir_janela({
     frames = frames,
     initial_frame = "controles",
     always_on_top = true,
+    auto_update_interval = 1,
+    auto_update_callback = function()
+        local telemetria = dados.read()
+        lua_ui_bridge.definir_display("controles", "Velocidade", string.format("%.0f m/s", telemetria["velocidade_orbital"]))
+        if proc then
+            local linha = proc:read("*line")
+            lua_ui_bridge.definir_display("controles", "Altitude", string.format("%s m", linha))
+        end
+        --print(string.format("%.0f m", telemetria["altitude"]))
+    end,
 })
-
+""
 --lua_ui_bridge.definir_display("controles", "Velocidade", "1500 m/s")
 --lua_ui_bridge.definir_display("controles", "Altitude", "1850 m")

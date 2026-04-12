@@ -2,6 +2,7 @@ use krpc_client::Client;
 use krpc_client::services::space_center::SpaceCenter;
 use krpc_client::stream::Stream;
 use std::sync::Arc;
+use std::collections::HashMap;
 
 struct Telemetria {
     altitude: Stream<f64>,
@@ -65,6 +66,7 @@ pub async fn lancamento_basico (client: Arc<Client>)
             println!("Atingiu {} km de altitude! Cortando motores...", apoastro / 1000.0);
             break;
         }
+        telemetria.write().await?;
     }
     Ok(())
 }
@@ -105,8 +107,7 @@ pub async fn orbitador (client: Arc<Client>)
         if telemetria.apoastro.get().await? >= _height_taguet {
             break;
         }
-        print!("\x1B[2J\x1B[H"); // Limpa a tela e move o cursoR para o início
-        println!("tempo para apoastro: {:.2} s", telemetria.tempo_para_apoastro.get().await.unwrap_or(0.0_f64));
+        telemetria.print().await?;
     }
 
     loop {
@@ -144,7 +145,7 @@ pub async fn orbitador (client: Arc<Client>)
             break;
         }
 
-        telemetria.print().await;
+        telemetria.write().await?;
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     }
 
@@ -165,7 +166,7 @@ pub async fn orbitador (client: Arc<Client>)
             break;
         }
         
-        telemetria.print().await?;
+        telemetria.write().await?;
     }
 
     Ok(())
@@ -393,6 +394,25 @@ impl Telemetria {
         println!("velocidade Horizontal: {:.2} m/s", self.velocidade_horizontal.get().await?);
         println!("velocidade: {:.2} m/s", self.velocidade.get().await?);
 
+        Ok(())
+    }
+
+    async fn write(&self) -> Result<(), Box<dyn std::error::Error>> {
+        // Coleta todos os valores primeiro para garantir que não há erros antes de limpar/imprimir
+        let altitude = self.altitude.get().await?;
+        let telemeria_instantanea = HashMap::from([
+            ("altitude", altitude),
+            ("massa", self.massa.get().await? as f64),
+            ("gravidade_superficial", self.gravidade_superficial),
+            ("apoastro", self.apoastro.get().await?),
+            ("trust_maximo", self.trust_maximo.get().await? as f64),
+            ("parametro_gravitacional", self.parametro_gravitacional),
+            ("raio_equatorial", self.raio_equatorial),
+            ("velocidade_orbital", self.velocidade_orbital.get().await?),
+            ("tempo_para_apoastro", self.tempo_para_apoastro.get().await?),
+            ("altitude_nivel_mar", self.altitude_nivel_mar.get().await?),
+        ]);
+        crate::gerenciador_de_dados::write(&telemeria_instantanea)?;
         Ok(())
     }
 }

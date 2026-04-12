@@ -3,6 +3,7 @@ use mlua::{Function, Lua, RegistryKey, Table};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::Duration;
 
 struct ButtonDef {
     label: String,
@@ -52,6 +53,8 @@ struct RuntimeState {
     lua: Rc<Lua>,
     frames: HashMap<String, FrameDef>,
     current_frame: String,
+    auto_update_interval: Option<u64>,
+    auto_update_callback: Option<Rc<RegistryKey>>,
 }
 
 type AppState = Rc<RefCell<RuntimeState>>;
@@ -60,10 +63,27 @@ type AppState = Rc<RefCell<RuntimeState>>;
 enum Message {
     ButtonPressed(usize),
     ActionCompleted(Result<String, String>),
+    AutoUpdate,
+}
+
+fn schedule_auto_update(interval_ms: u64) -> iced::Task<Message> {
+    //println!("Agendando atualização automática a cada {} ms", interval_ms);
+    iced::Task::perform(
+        async move {
+            tokio::time::sleep(Duration::from_millis(interval_ms)).await;
+            Message::AutoUpdate
+        },
+        |message| message,
+    )
 }
 
 fn boot(state: AppState) -> (AppState, iced::Task<Message>) {
-    (state, iced::Task::none())
+    let interval = state.borrow().auto_update_interval;
+    if let Some(ms) = interval {
+        (state.clone(), schedule_auto_update(ms))
+    } else {
+        (state, iced::Task::none())
+    }
 }
 
 fn update(state: &mut AppState, message: Message) -> iced::Task<Message> {
@@ -123,6 +143,28 @@ fn update(state: &mut AppState, message: Message) -> iced::Task<Message> {
             match result {
                 Ok(message) => println!("Ação concluída: {}", message),
                 Err(error) => eprintln!("Erro na ação de fundo: {}", error),
+            }
+        }
+        Message::AutoUpdate => {
+            let interval = state.borrow().auto_update_interval;
+            let callback = state.borrow().auto_update_callback.clone();
+
+            if let Some(callback_key) = callback {
+                let lua = state.borrow().lua.clone();
+                match lua.registry_value::<Function>(callback_key.as_ref()) {
+                    Ok(callback_fn) => {
+                        if let Err(error) = callback_fn.call::<()>(()) {
+                            eprintln!("Erro no callback de atualização automática: {}", error);
+                        }
+                    }
+                    Err(error) => {
+                        eprintln!("Não foi possível recuperar callback de auto-update: {}", error);
+                    }
+                }
+            }
+
+            if let Some(ms) = interval {
+                return schedule_auto_update(ms);
             }
         }
     }
@@ -441,6 +483,14 @@ fn lua_ui_bridge(lua: &Lua) -> mlua::Result<mlua::Table> {
 
                 let default_always_on_top: bool = config.get::<Option<bool>>("always_on_top")?.unwrap_or(false);
 
+                let auto_update_interval: Option<u64> = config.get("auto_update_interval")?;
+                let auto_update_callback: Option<Function> = config.get("auto_update_callback")?;
+                let auto_update_callback = if let Some(callback_fn) = auto_update_callback {
+                    Some(Rc::new(lua.create_registry_value(callback_fn)?))
+                } else {
+                    None
+                };
+
                 let initial_frame_opt: Option<String> = config.get("initial_frame")?;
                 let initial_frame = initial_frame_opt.unwrap_or_else(|| "default".to_string());
 
@@ -510,6 +560,8 @@ fn lua_ui_bridge(lua: &Lua) -> mlua::Result<mlua::Table> {
                     lua: lua.clone(),
                     frames,
                     current_frame: initial_frame,
+                    auto_update_interval,
+                    auto_update_callback,
                 }));
 
                 *change_frame_state.borrow_mut() = Some(state.clone());
