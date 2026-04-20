@@ -21,8 +21,8 @@ local frames = {
         display_size = { width = 270, height = 60 },
         display_position = "right",
         displays = {
-            { label = "Velocidade", value = "0 m/s" },
-            { label = "Altitude", value = "0 m" },
+            { label = "velocidade_orbital", value = "0 m/s" },
+            { label = "altitude", value = "0 m" },
         },
         buttons = {
             { label = "Lançamento", callback = function() lua_ui_bridge.mudar_frame("lancamento") end },
@@ -53,7 +53,7 @@ local frames = {
         button_size = { width = 160, height = 45 },
         buttons = {
             { label = "Iniciar órbita", callback = function ()
-                os.execute('start /B lua fases.lua orbitar')
+                proc = io.popen('lua fases.lua orbitar')
             end },
             { label = "Voltar", callback = function() lua_ui_bridge.mudar_frame("controles")
                 if proc then
@@ -84,11 +84,11 @@ lua_ui_bridge.abrir_janela({
     always_on_top = true,
     auto_update_interval = 1,
     auto_update_callback = function()
-        local telemetria = dados.read()
-        lua_ui_bridge.definir_display("controles", "Velocidade", string.format("%.0f m/s", telemetria["velocidade_orbital"]))
         if proc then
             local linha = proc:read("*line")
-            lua_ui_bridge.definir_display("controles", "Altitude", string.format("%s m", linha))
+            local tabela = dados.constroi_tabela(linha) or {}
+            lua_ui_bridge.definir_display("controles", "altitude", string.format("%.2f m", tabela["altitude"] or 0))
+            lua_ui_bridge.definir_display("controles", "velocidade_orbital", string.format("%.2f m/s", tabela["velocidade_orbital"] or 0))
         end
         --print(string.format("%.0f m", telemetria["altitude"]))
     end,

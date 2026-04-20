@@ -107,7 +107,7 @@ pub async fn orbitador (client: Arc<Client>)
         if telemetria.apoastro.get().await? >= _height_taguet {
             break;
         }
-        telemetria.print().await?;
+        telemetria.write().await?;
     }
 
     loop {
@@ -159,7 +159,7 @@ pub async fn orbitador (client: Arc<Client>)
 
         auto_pilot.target_pitch_and_heading(direção, 90.0).await?;
         if (telemetria.apoastro.get().await.unwrap_or(0.0_f64) - telemetria.periastro.get().await.unwrap_or(0.0_f64)).abs() < 2_000.0
-        || telemetria.apoastro.get().await.unwrap_or(0.0_f64) > _height_taguet * 1.30 {
+        || telemetria.apoastro.get().await.unwrap_or(0.0_f64) > _height_taguet * 1.10 {
             println!("Órbita estabilizada!");
             control.set_throttle(0.0).await?;
             auto_pilot.disengage().await?;
@@ -229,6 +229,7 @@ pub async fn aterricador(client: Arc<Client>)
             pouso(&vessel).await?;
             break;
         }
+        telemetria.write().await?;
     }
 
     Ok(())
@@ -285,6 +286,7 @@ async fn pouso(vessel: &krpc_client::services::space_center::Vessel) -> Result<(
             control.set_throttle(0.0).await?;
             break;
         }
+        telemetria.write().await?;
     }
 
     Ok(())
@@ -299,7 +301,7 @@ async fn distancia_de_queima(velocidade_final: f64, telemetria: &Telemetria)
     telemetria.velocidade.get().await?).abs() * (telemetria.trust_maximo.get().await? as f64 /
     telemetria.massa.get().await? as f64)) - telemetria.gravidade_superficial;
     let distancia: f64 = (v_inicial.powi(2) - velocidade_final.powi(2)) / (2.0 * acelerecao).abs();
-    println!("Distancia de queima: {:.2} m", distancia);
+    //println!("Distancia de queima: {:.2} m", distancia);
     Ok(distancia)
 }
     
@@ -399,9 +401,8 @@ impl Telemetria {
 
     async fn write(&self) -> Result<(), Box<dyn std::error::Error>> {
         // Coleta todos os valores primeiro para garantir que não há erros antes de limpar/imprimir
-        let altitude = self.altitude.get().await?;
         let telemeria_instantanea = HashMap::from([
-            ("altitude", altitude),
+            ("altitude", self.altitude.get().await?),
             ("massa", self.massa.get().await? as f64),
             ("gravidade_superficial", self.gravidade_superficial),
             ("apoastro", self.apoastro.get().await?),
@@ -412,7 +413,11 @@ impl Telemetria {
             ("tempo_para_apoastro", self.tempo_para_apoastro.get().await?),
             ("altitude_nivel_mar", self.altitude_nivel_mar.get().await?),
         ]);
-        crate::gerenciador_de_dados::write(&telemeria_instantanea)?;
+        println!("altitude={:?}; velocidade_orbital={:?}",
+         telemeria_instantanea.get("altitude").unwrap_or(&0.0),
+         telemeria_instantanea.get("velocidade_orbital").unwrap_or(&0.0)
+        );
+
         Ok(())
     }
 }

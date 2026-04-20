@@ -40,4 +40,17 @@ function dados.read()
     return tabela
 end
 
+function dados.constroi_tabela(str)
+    local tabela = {}
+    for par in string.gmatch(str, "([^; ]+)") do
+        local key, value = string.match(par, "([^=]+)=([^=]+)")
+        if key and value then
+            tabela[key] = tonumber(value) or value
+        end
+    end
+    return tabela    
+end
+
+--dados.constroi_tabela("velocidade_orbital=0; altitude=0; tempo_para_apoastro=0; altitude_nivel_mar=0")
+
 return dados
